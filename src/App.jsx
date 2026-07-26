@@ -255,7 +255,15 @@ function App() {
     e.preventDefault()
     const nextRow = Math.min(8, Math.max(0, row + delta[0]))
     const nextCol = Math.min(8, Math.max(0, col + delta[1]))
-    cellRefs.current[nextRow][nextCol]?.focus()
+    cellRefs.current[nextRow][nextCol]?.focus({ preventScroll: true })
+  }
+
+  // iOS/Chrome tienden a hacer scroll para "centrar" un input al enfocarlo,
+  // incluso con inputMode="none". Tomamos el foco nosotros mismos con
+  // preventScroll para evitar ese salto de la pagina.
+  const handleCellPointerDown = (e) => {
+    e.preventDefault()
+    e.currentTarget.focus({ preventScroll: true })
   }
 
   return (
@@ -348,6 +356,8 @@ function App() {
                   onChange={(e) => handleChange(r, c, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, r, c)}
                   onFocus={() => setSelected({ row: r, col: c })}
+                  onMouseDown={handleCellPointerDown}
+                  onTouchStart={handleCellPointerDown}
                 />
               </div>
             )
