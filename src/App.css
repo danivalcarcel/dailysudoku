@@ -301,6 +301,11 @@ h1 {
   color: var(--color-muted);
 }
 
+.cell__note--highlight {
+  font-weight: 900;
+  color: var(--color-accent);
+}
+
 .board .cell:nth-child(9n) {
   border-right: none;
 }

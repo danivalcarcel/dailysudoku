@@ -113,6 +113,11 @@ function App() {
 
   const isSolved = board.every((row, r) => row.every((cell, c) => Number(cell) === solution[r][c]))
 
+  // Numero de la casilla seleccionada (si tiene valor), para resaltarlo entre
+  // las notas del resto de casillas y facilitar la comparacion.
+  const selectedValue = board[selected.row][selected.col]
+  const highlightDigit = selectedValue !== '' ? Number(selectedValue) : null
+
   // Cronometro: cuenta mientras el puzzle actual no este resuelto.
   useEffect(() => {
     if (isSolved) return
@@ -365,7 +370,10 @@ function App() {
                 {showNotes && (
                   <div className="cell__notes">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                      <span key={n} className="cell__note">
+                      <span
+                        key={n}
+                        className={`cell__note${n === highlightDigit && cellNotes.includes(n) ? ' cell__note--highlight' : ''}`}
+                      >
                         {cellNotes.includes(n) ? n : ''}
                       </span>
                     ))}
