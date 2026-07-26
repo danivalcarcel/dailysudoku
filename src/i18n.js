@@ -1,0 +1,64 @@
+export const LOCALES = ['es', 'en']
+
+export const translations = {
+  es: {
+    title: 'Sudoku Diario',
+    subtitle: 'Un puzzle nuevo cada día',
+    solved: '¡Sudoku resuelto correctamente!',
+    reset: 'Reiniciar',
+    erase: 'Borrar',
+    notes: 'Notas',
+    scoreLabel: 'Puntuación',
+    pointsSuffix: 'puntos',
+    historyLabel: 'Historial',
+    historyEmpty: 'Aún no has resuelto ningún sudoku.',
+    historyToday: 'hoy',
+    difficulties: {
+      easy: 'Fácil',
+      medium: 'Medio',
+      hard: 'Difícil',
+      extreme: 'Extremo',
+    },
+  },
+  en: {
+    title: 'Daily Sudoku',
+    subtitle: 'A new puzzle every day',
+    solved: 'Sudoku solved correctly!',
+    reset: 'Reset',
+    erase: 'Erase',
+    notes: 'Notes',
+    scoreLabel: 'Score',
+    pointsSuffix: 'points',
+    historyLabel: 'History',
+    historyEmpty: "You haven't solved any sudoku yet.",
+    historyToday: 'today',
+    difficulties: {
+      easy: 'Easy',
+      medium: 'Medium',
+      hard: 'Hard',
+      extreme: 'Extreme',
+    },
+  },
+}
+
+const STORAGE_KEY = 'daily-sudoku:locale'
+
+export function detectLocale() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (LOCALES.includes(stored)) return stored
+  } catch {
+    // localStorage no disponible: se ignora
+  }
+
+  const browserLocale = navigator.language?.slice(0, 2)
+  return LOCALES.includes(browserLocale) ? browserLocale : 'es'
+}
+
+export function persistLocale(locale) {
+  try {
+    localStorage.setItem(STORAGE_KEY, locale)
+  } catch {
+    // se ignora
+  }
+}

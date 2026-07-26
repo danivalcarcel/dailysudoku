@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package build output
+        run: |
+          cd dist
+          zip -r "../daily-sudoku-${{ github.ref_name }}.zip" .
+
+      # Un tag con un sufijo tras un guion (p.ej. v0.1.0-beta.1) se publica como pre-release;
+      # un tag "limpio" (p.ej. v1.0.0) se publica como release normal.
+      - name: Determine prerelease
+        id: prerelease
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_name }}" == *-* ]]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          prerelease: ${{ steps.prerelease.outputs.value }}
+          generate_release_notes: true
+          files: daily-sudoku-${{ github.ref_name }}.zip
