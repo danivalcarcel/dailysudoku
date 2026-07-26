@@ -195,26 +195,30 @@ function App() {
     setPuzzleState((prev) => {
       const nextBoard = prev.board.map((r) => [...r])
       nextBoard[row][col] = value
+
+      // Un numero erroneo no descarta nada: solo un acierto elimina ese
+      // candidato del resto de la fila, columna y bloque 3x3 (y de la propia casilla).
+      const isCorrectEntry = value !== '' && Number(value) === solution[row][col]
+      if (!isCorrectEntry) {
+        return { ...prev, board: nextBoard }
+      }
+
       const nextNotes = prev.notes.map((r) => [...r])
       nextNotes[row][col] = []
 
-      // Al fijar un valor, ese numero deja de ser candidato en el resto de la fila,
-      // columna y bloque 3x3.
-      if (value !== '') {
-        const digit = Number(value)
-        const boxRow = Math.floor(row / 3) * 3
-        const boxCol = Math.floor(col / 3) * 3
+      const digit = Number(value)
+      const boxRow = Math.floor(row / 3) * 3
+      const boxCol = Math.floor(col / 3) * 3
 
-        for (let i = 0; i < 9; i++) {
-          nextNotes[row][i] = nextNotes[row][i].filter((n) => n !== digit)
-          nextNotes[i][col] = nextNotes[i][col].filter((n) => n !== digit)
-        }
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            const rr = boxRow + r
-            const cc = boxCol + c
-            nextNotes[rr][cc] = nextNotes[rr][cc].filter((n) => n !== digit)
-          }
+      for (let i = 0; i < 9; i++) {
+        nextNotes[row][i] = nextNotes[row][i].filter((n) => n !== digit)
+        nextNotes[i][col] = nextNotes[i][col].filter((n) => n !== digit)
+      }
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const rr = boxRow + r
+          const cc = boxCol + c
+          nextNotes[rr][cc] = nextNotes[rr][cc].filter((n) => n !== digit)
         }
       }
 
