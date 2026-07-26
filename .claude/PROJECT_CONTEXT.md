@@ -3,7 +3,8 @@
 ## What this is
 
 A "daily sudoku" web app, in the spirit of Wordle: one puzzle per day, same
-puzzle for everyone who opens it that day, resetting at local midnight.
+puzzle for everyone who opens it that day, resetting at the same fixed UTC
+time worldwide (07:00 UTC), not at each player's local midnight.
 Started as a deliberately bare-bones skeleton ("lo más básico posible") and
 grew feature by feature over a single long conversation, each feature added
 on explicit request and verified in the browser before moving on.

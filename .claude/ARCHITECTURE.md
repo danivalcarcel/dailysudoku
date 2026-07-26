@@ -32,8 +32,11 @@ next refactor, but don't do it preemptively.
 ## Data flow, top to bottom
 
 1. `getDailySeed(date)` (in `sudokuGenerator.js`) turns a `Date` into a
-   local `YYYY-MM-DD` string. This string is used both as the RNG seed
-   input and as the storage key for that day's data.
+   `YYYY-MM-DD` string, but shifted so the "day" changes for everyone at
+   the same fixed UTC hour (`RESET_HOUR_UTC`, currently 7) rather than at
+   each player's local midnight — see `.claude/DECISIONS.md`. This string
+   is used both as the RNG seed input and as the storage key for that
+   day's data.
 2. `generateDailySudoku(date, difficulty)` combines the date seed with the
    difficulty name (`"${seed}:${difficulty}"`), hashes it (`xmur3`) into a
    seed for `mulberry32`, then:

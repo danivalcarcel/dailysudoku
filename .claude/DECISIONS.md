@@ -20,11 +20,26 @@ date-derived seed, or (b) pre-generate a static list of puzzles (e.g. 365)
 and pick by day-of-year. Seeded generation was chosen because it needs no
 maintenance/regeneration and "just works" indefinitely, at the cost of the
 puzzle quality/difficulty being algorithmic rather than hand-curated. The
-seed is `"${YYYY-MM-DD}:${difficulty}"` (local date, not UTC — so the puzzle
-changes at the player's local midnight, not at UTC midnight), hashed with
-`xmur3` into a `mulberry32` PRNG seed. Including `difficulty` in the seed
-means each difficulty is a fully independent random puzzle, not just the
-same solved grid with a different number of holes punched out of it.
+seed is `"${YYYY-MM-DD}:${difficulty}"`, hashed with `xmur3` into a
+`mulberry32` PRNG seed. Including `difficulty` in the seed means each
+difficulty is a fully independent random puzzle, not just the same solved
+grid with a different number of holes punched out of it.
+
+**The day boundary is a fixed UTC time, not local midnight.** This
+originally used each player's local calendar date (so the puzzle changed
+at local midnight, a different real-world instant per timezone), but was
+changed so *everyone* gets the new puzzle at the same moment worldwide:
+`RESET_HOUR_UTC = 7` in `sudokuGenerator.js` — `getDailySeed` subtracts
+that many hours from the given `Date` before reading its UTC year/month/
+day, so the calendar day used for the seed only advances once the wall
+clock in UTC passes 07:00. Concretely: at 05:00 UTC on July 27th it's still
+July 26th's puzzle; only from 07:00 UTC on July 27th does July 27th's
+puzzle start. **Anything that displays "today's date" in the UI must use
+`getDailySeed()`'s result, not the browser's local calendar date** — during
+the early hours of a new local day (or even a new UTC day, before 07:00)
+it's still showing yesterday's puzzle, and the displayed date needs to
+match. If the reset time ever needs to change, `RESET_HOUR_UTC` is the one
+constant to edit; don't reintroduce local-timezone-based dating.
 
 Uniqueness is enforced during hole-punching: each candidate removal is kept
 only if a solution-counting solver (capped at 2, for speed) still finds

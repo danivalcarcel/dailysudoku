@@ -99,6 +99,13 @@ h1 {
   font-size: 0.8rem;
 }
 
+.puzzle-date {
+  margin: 0.15rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .stats-row {
   display: flex;
   align-items: center;

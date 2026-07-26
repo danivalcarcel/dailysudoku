@@ -4,6 +4,8 @@ export const translations = {
   es: {
     title: 'Sudoku Diario',
     subtitle: 'Un puzzle nuevo cada día',
+    puzzleDateLabel: 'Sudoku del',
+    nextPuzzleLabel: 'Próximo en',
     solved: '¡Sudoku resuelto correctamente!',
     reset: 'Reiniciar',
     erase: 'Borrar',
@@ -24,6 +26,8 @@ export const translations = {
   en: {
     title: 'Daily Sudoku',
     subtitle: 'A new puzzle every day',
+    puzzleDateLabel: 'Puzzle for',
+    nextPuzzleLabel: 'Next in',
     solved: 'Sudoku solved correctly!',
     reset: 'Reset',
     erase: 'Erase',

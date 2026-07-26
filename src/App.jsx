@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { generateDailySudoku, getDailySeed } from './sudokuGenerator'
+import { generateDailySudoku, getDailySeed, getNextResetTime } from './sudokuGenerator'
 import { loadPuzzleState, savePuzzleState } from './boardStorage'
 import { LOCALES, translations, detectLocale, persistLocale } from './i18n'
 import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } from './difficulties'
@@ -29,13 +29,20 @@ function formatTime(totalSeconds) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function formatHistoryDate(dateStr, locale) {
+function formatDate(dateStr, locale) {
   const date = new Date(`${dateStr}T00:00:00`)
   return date.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   })
+}
+
+function formatCountdown(ms) {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60000))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${hours}h ${minutes}min`
 }
 
 function App() {
@@ -61,6 +68,7 @@ function App() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [justScored, setJustScored] = useState(false)
   const [toast, setToast] = useState(null)
+  const [countdown, setCountdown] = useState(() => getNextResetTime().getTime() - Date.now())
   const cellRefs = useRef(Array.from({ length: 9 }, () => Array(9).fill(null)))
   const toastTimeoutRef = useRef(null)
   const t = translations[locale]
@@ -108,6 +116,16 @@ function App() {
   useEffect(() => {
     persistDifficulty(difficulty)
   }, [difficulty])
+
+  // Cuenta atras hasta el proximo cambio de puzzle (misma hora UTC para todos).
+  // Solo se muestra con precision de minutos, asi que no hace falta tick por segundo.
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCountdown(getNextResetTime().getTime() - Date.now())
+    }, 30000)
+
+    return () => clearInterval(id)
+  }, [])
 
   const isGiven = (row, col) => puzzle[row][col] !== 0
 
@@ -305,6 +323,9 @@ function App() {
         <div className="topbar__brand">
           <h1>{t.title}</h1>
           <p className="subtitle">{t.subtitle}</p>
+          <p className="puzzle-date">
+            {t.puzzleDateLabel} {formatDate(seed, locale)} · {t.nextPuzzleLabel} {formatCountdown(countdown)}
+          </p>
         </div>
 
         <div className="lang-switch">
@@ -463,7 +484,7 @@ function App() {
                 <li key={date} className="history__row">
                   <div className="history__row-main">
                     <span>
-                      {formatHistoryDate(date, locale)}
+                      {formatDate(date, locale)}
                       {date === seed && <span className="history__today"> ({t.historyToday})</span>}
                     </span>
                     <span>

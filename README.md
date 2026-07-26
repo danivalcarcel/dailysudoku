@@ -8,7 +8,8 @@ no backend or database.
 
 ## Features
 
-- New puzzle every day, resetting at local midnight
+- New puzzle every day, resetting at the same fixed UTC time (07:00 UTC)
+  for everyone, regardless of timezone
 - Four difficulty levels (Easy, Medium, Hard, Extreme), each with its own
   independent daily puzzle and saved progress
 - Notes/pencil marks for candidate numbers, with matching notes

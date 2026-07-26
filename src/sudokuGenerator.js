@@ -118,11 +118,29 @@ function toRows(flatGrid) {
   return rows
 }
 
+// El puzzle cambia para todo el mundo a la misma hora UTC (no a medianoche
+// local de cada jugador), asi que "el dia" se calcula desplazando el reloj
+// esa cantidad de horas antes de leer la fecha en UTC.
+export const RESET_HOUR_UTC = 7
+
 export function getDailySeed(date = new Date()) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const shifted = new Date(date.getTime() - RESET_HOUR_UTC * 60 * 60 * 1000)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+// Proximo instante (Date) en el que el puzzle cambiara, para poder mostrar
+// una cuenta atras.
+export function getNextResetTime(date = new Date()) {
+  const next = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), RESET_HOUR_UTC, 0, 0, 0),
+  )
+  if (next.getTime() <= date.getTime()) {
+    next.setUTCDate(next.getUTCDate() + 1)
+  }
+  return next
 }
 
 export function generateDailySudoku(date = new Date(), difficulty = 'medium') {
