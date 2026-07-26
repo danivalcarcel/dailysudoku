@@ -4,7 +4,7 @@
   align-items: center;
   gap: 1.25rem;
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
   padding: 1.75rem 1.5rem;
 }
 
@@ -115,7 +115,7 @@ h1 {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  width: min(24.75rem, 100%);
+  width: min(34rem, 100%);
 }
 
 .history__toggle {
@@ -203,7 +203,7 @@ h1 {
 }
 
 .board {
-  width: min(24.75rem, 100%);
+  width: min(34rem, 100%);
   aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: repeat(9, 1fr);
@@ -236,7 +236,7 @@ h1 {
   text-align: center;
   font-family: inherit;
   font-weight: inherit;
-  font-size: clamp(0.95rem, 4.5vw, 1.2rem);
+  font-size: clamp(0.95rem, 4.5vw, 1.5rem);
   color: inherit;
   border: none;
   outline: none;
@@ -258,7 +258,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.5rem, 2vw, 0.62rem);
+  font-size: clamp(0.5rem, 2vw, 0.72rem);
   font-weight: 700;
   color: var(--color-muted);
 }
@@ -396,7 +396,7 @@ h1 {
 
 .numpad {
   display: none;
-  width: min(24.75rem, 100%);
+  width: min(34rem, 100%);
   grid-template-columns: repeat(9, 1fr);
   gap: 0.35rem;
 }
@@ -443,8 +443,14 @@ h1 {
 
 @media (max-width: 480px) {
   .app {
-    gap: 0.6rem;
-    padding: 0.4rem 0.2rem;
+    gap: 0.35rem;
+    padding: 0.25rem 0.2rem;
+  }
+
+  .board,
+  .numpad,
+  .history {
+    width: min(28rem, 90%);
   }
 
   h1 {
@@ -464,18 +470,18 @@ h1 {
   }
 
   .difficulty-switch__btn {
-    padding: 0.35rem 0.7rem;
-    font-size: 0.78rem;
+    padding: 0.28rem 0.6rem;
+    font-size: 0.75rem;
   }
 
   .actions {
-    gap: 0.6rem;
+    gap: 0.5rem;
   }
 
   .actions button,
   .actions .notes-toggle {
-    padding: 0.5rem 1.1rem;
-    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
   }
 
   .history__toggle {
@@ -485,12 +491,12 @@ h1 {
 
   .numpad {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
   .numpad__btn {
-    padding: 0.65rem 0;
-    font-size: 1.05rem;
+    padding: 0.4rem 0;
+    font-size: 0.95rem;
   }
 
   .numpad__btn--erase {

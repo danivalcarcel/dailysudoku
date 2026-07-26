@@ -33,3 +33,9 @@ body {
   background: linear-gradient(160deg, var(--color-bg-start), var(--color-bg-end));
   color: var(--color-text);
 }
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
