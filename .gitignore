@@ -3,3 +3,10 @@ dist
 .DS_Store
 *.local
 .claude/settings.local.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
