@@ -444,7 +444,7 @@ h1 {
 @media (max-width: 480px) {
   .app {
     gap: 0.65rem;
-    padding: 0.85rem 0.75rem;
+    padding: 0.6rem 0.4rem;
   }
 
   h1 {
@@ -481,5 +481,20 @@ h1 {
   .history__toggle {
     padding: 0.2rem 0.7rem;
     font-size: 0.75rem;
+  }
+
+  .numpad {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45rem;
+  }
+
+  .numpad__btn {
+    padding: 0.65rem 0;
+    font-size: 1.05rem;
+  }
+
+  .numpad__btn--erase {
+    grid-column: span 3;
+    font-size: 0.85rem;
   }
 }
