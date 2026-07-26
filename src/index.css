@@ -29,7 +29,6 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   background: linear-gradient(160deg, var(--color-bg-start), var(--color-bg-end));
   color: var(--color-text);
