@@ -49,6 +49,11 @@ npm run build
 produces a production build in `dist/` (this is what the release workflow
 also runs).
 
+If the dev server fails with something like `Cannot find package
+'@cloudflare/vite-plugin'` after pulling changes, it's not a bug — a
+dependency was added to `package.json` (e.g. by the Cloudflare integration
+PR) and `npm install` just hasn't been run since. Run it and retry.
+
 ## Browser preview via Claude Code
 
 `.claude/launch.json` is already configured so the Claude Code browser

@@ -32,24 +32,37 @@ The app itself supports Spanish and English via `src/i18n.js`.
   (`src/difficulties.js`), each a fully independent daily puzzle with its
   own saved progress.
 - Manual digit entry via keyboard (physical) or an on-screen numpad (shown
-  automatically on narrower viewports, ≤860px).
+  automatically on narrower viewports, ≤860px). Phones (≤480px) get a
+  compact 3×3 numpad grid; tablets (≤860px) get a single row of 9 — see
+  `.claude/DECISIONS.md`.
 - Arrow-key navigation between cells.
 - Automatic validation: wrong digits are highlighted red as you type, no
   "check" button.
 - Notes/pencil marks: a toggle switches digit entry into marking candidates
-  in a 3×3 mini-grid instead of filling the cell; entering a real value
-  clears that cell's notes and removes that digit from the notes of every
-  peer cell in the same row/column/box.
+  in a 3×3 mini-grid instead of filling the cell; entering a **correct**
+  value clears that cell's notes and removes that digit from the notes of
+  every peer cell in the same row/column/box (a wrong entry touches nothing).
+  Selecting any filled cell also bold-highlights that same digit wherever it
+  appears as a note elsewhere, to help compare candidates.
+- A per-difficulty timer: ticks every second while that difficulty's puzzle
+  is unsolved, freezes on completion, persists across reloads, and the
+  final time is recorded in the daily history.
 - Scoring: points for completing a row, column, or box (see
   `.claude/DECISIONS.md` for why columns were added), plus a larger bonus
   for finishing the whole puzzle. A running lifetime total and a per-day
-  history are both persisted and never reset.
+  history (points + per-difficulty times) are both persisted and never
+  reset.
 - i18n (ES/EN) with a language switcher, persisted preference.
 - Local progress persistence per day+difficulty (board, notes, which
-  units/whole-puzzle have already been scored) so a reload never loses
-  progress or double-awards points.
-- Responsive layout: compact corner header, board scales to viewport width,
-  numpad only on touch-sized viewports.
+  units/whole-puzzle have already been scored, elapsed time) so a reload
+  never loses progress or double-awards points.
+- Responsive layout: compact corner header, board scales to viewport width
+  (bigger on desktop, gently inset on phones — see `.claude/DECISIONS.md`
+  for the `#root` sizing bug this depended on), numpad only on touch-sized
+  viewports.
+- Cells take focus themselves (`preventDefault` + `focus({preventScroll:
+  true})`) instead of relying on the browser default, so iOS doesn't
+  scroll the page to "center" a tapped cell.
 - GitHub repo with a tag-triggered release workflow (see
   `.claude/DEV_SETUP.md`).
 - Live at https://dailysudoku.danivalcarcel.workers.dev/, deployed via

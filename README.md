@@ -11,8 +11,10 @@ no backend or database.
 - New puzzle every day, resetting at local midnight
 - Four difficulty levels (Easy, Medium, Hard, Extreme), each with its own
   independent daily puzzle and saved progress
-- Notes/pencil marks for candidate numbers
+- Notes/pencil marks for candidate numbers, with matching notes
+  bold-highlighted when you select a filled cell
 - Automatic validation as you type (no "check" button)
+- A per-difficulty timer, recorded in the daily history
 - Scoring: points for completing a row, column, or box, plus a bigger bonus
   for finishing the whole puzzle, with a lifetime total and a per-day history
 - English / Spanish

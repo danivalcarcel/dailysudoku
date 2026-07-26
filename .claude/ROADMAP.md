@@ -21,7 +21,8 @@ asking first.
 - **Difficulty-aware hints**: nothing like "reveal one cell" or "check my
   current progress against the solution" beyond the always-on red-highlight
   validation exists.
-- **`App.jsx` size**: it's a single ~350-line component with no
-  sub-components. Fine so far; if it keeps growing, splitting out the board
-  grid and the numpad would be the natural refactor (see
-  `.claude/ARCHITECTURE.md`) — don't do this preemptively.
+- **`App.jsx` size**: it's a single ~490-line component with no
+  sub-components (growing steadily as features are added). Fine so far; if
+  it keeps growing, splitting out the board grid and the numpad would be
+  the natural refactor (see `.claude/ARCHITECTURE.md`) — don't do this
+  preemptively.

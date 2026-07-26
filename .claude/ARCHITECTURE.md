@@ -13,9 +13,9 @@ src/
   difficulties.js         difficulty list + config (targetEmpty, unitPoints, completionPoints)
   sudokuCompletion.js      row/column/box completion checks used by the scoring system
 
-  boardStorage.js          persistence of {board, notes, completedUnits, scored} per day+difficulty
+  boardStorage.js          persistence of {board, notes, completedUnits, scored, elapsedSeconds} per day+difficulty
   score.js                 persistence of the lifetime total score
-  scoreHistory.js          persistence of per-day point totals (never pruned)
+  scoreHistory.js          persistence of per-day {points, times: {difficulty: seconds}} (never pruned)
 
   i18n.js                  translations dict (es/en) + locale detection/persistence
 
@@ -44,25 +44,32 @@ next refactor, but don't do it preemptively.
      empty cells.
    - Returns `{ puzzle, solution }` as 9×9 arrays (0 = empty in `puzzle`).
 3. `App.jsx` calls this once per `difficulty` change (`useMemo`), then loads
-   or creates a `puzzleState` object: `{ board, notes, completedUnits, scored }`.
+   or creates a `puzzleState` object:
+   `{ board, notes, completedUnits, scored, elapsedSeconds }`.
    - `board`: 9×9 array of strings (`''` for empty, `'1'`-`'9'` for filled).
    - `notes`: 9×9 array of number arrays (candidate marks per cell).
    - `completedUnits`: `{ rows: bool[9], cols: bool[9], boxes: bool[9] }` —
      which units have already earned their points, so they never re-earn.
    - `scored`: whether the whole-puzzle completion bonus was already given.
+   - `elapsedSeconds`: seconds spent on the current attempt at this
+     difficulty's puzzle; see the timer effect below.
 4. Every `puzzleState` change is persisted via `savePuzzleState(seed,
-   difficulty, board, notes, completedUnits, scored)`, keyed by
-   `daily-sudoku:board:<date>:<difficulty>`. Saving also deletes any stored
-   key for a *different date* (but keeps other difficulties for the *same*
-   date) — see `.claude/DECISIONS.md`.
-5. Two independent `useEffect`s watch for scoring events:
-   - one fires whenever `board` changes, recomputes which rows/cols/boxes
-     are newly complete-and-correct (`sudokuCompletion.js`), awards
-     `unitPoints` per newly-completed unit, and shows a toast.
-   - one fires whenever the whole board matches the solution and `scored`
-     is still `false`, awards `completionPoints` once.
-   Both add to the lifetime total (`score.js`) and to today's entry in the
-   history map (`scoreHistory.js`).
+   difficulty, board, notes, completedUnits, scored, elapsedSeconds)`, keyed
+   by `daily-sudoku:board:<date>:<difficulty>`. Saving also deletes any
+   stored key for a *different date* (but keeps other difficulties for the
+   *same* date) — see `.claude/DECISIONS.md`.
+5. Three independent `useEffect`s watch for scoring/timing events:
+   - a timer effect that, while `!isSolved`, ticks a `setInterval` every
+     second incrementing `elapsedSeconds` (cleared/frozen once solved);
+   - one that fires whenever `board` changes, recomputes which rows/cols/
+     boxes are newly complete-and-correct (`sudokuCompletion.js`), awards
+     `unitPoints` per newly-completed unit, and shows a toast;
+   - one that fires whenever the whole board matches the solution and
+     `scored` is still `false`, awards `completionPoints` once and records
+     `elapsedSeconds` into today's history entry for this difficulty
+     (`recordHistoryTime`).
+   The two scoring effects both add to the lifetime total (`score.js`) and
+   to today's entry in the history map (`scoreHistory.js`).
 
 ## Rendering the board
 
@@ -86,7 +93,22 @@ numpad-targeting logic (built before notes existed) didn't need to change —
 see `.claude/DECISIONS.md`.
 
 `cellRefs` (a `useRef` 9×9 array of the actual `<input>` DOM nodes) is what
-arrow-key navigation calls `.focus()` on. `selected: {row, col}` in React
-state is a *separate* notion of "current cell" from DOM focus — it's what
-the numpad and the notes-mode selection ring use, and it's what survives
-a numpad tap stealing DOM focus away from the grid.
+arrow-key navigation calls `.focus({preventScroll: true})` on. `selected:
+{row, col}` in React state is a *separate* notion of "current cell" from
+DOM focus — it's what the numpad and the notes-mode selection ring use, and
+it's what survives a numpad tap stealing DOM focus away from the grid.
+
+Every cell's input also has `onMouseDown`/`onTouchStart` handlers that
+`preventDefault()` and take focus manually via `focus({preventScroll:
+true})`, instead of letting the browser's default tap-to-focus run — see
+`.claude/DECISIONS.md` (iOS otherwise scrolls the page to "center" the
+tapped cell).
+
+## Page shell (`body` / `#root`)
+
+`index.css` centers the app card horizontally: `body` is
+`display:flex; justify-content:center`, and `#root` is `width:100%;
+display:flex; justify-content:center`. Both pieces matter — see
+`.claude/DECISIONS.md` for the bug this fixes (a missing width on `#root`
+silently shrank the whole app on both desktop and mobile) and why the page
+is *not* also vertically centered (tried once, reverted).

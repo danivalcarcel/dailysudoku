@@ -111,6 +111,71 @@ deploy command and the live URL. If Cloudflare-specific files
 this is why they exist — don't remove them without checking whether the
 live site still needs them.
 
+## `#root` had no width: a real, long-standing sizing bug
+
+`body` centers its content with `display:flex; justify-content:center`,
+but `#root` (the child that React renders `.app` into) had no `width` of
+its own. A flex item with no set width shrinks to its *content* size
+instead of filling available space, so `.app`'s own `width:100%` was
+resolving against an already-shrunk `#root` — meaning the board had quietly
+been smaller than intended on **both** desktop and mobile the whole time,
+not just after the "enlarge the desktop board" request that surfaced it.
+Fixed with `#root { width:100%; display:flex; justify-content:center; }`
+(`#root` needs its own `justify-content:center` to re-center `.app`, since
+giving `#root` width:100% removes the leftover space `body`'s
+justify-content had been centering *within*).
+
+One follow-up attempt tried also centering the page **vertically**
+(`align-items:center` on `body`), to close a gap that appeared below
+"Historial" on tall phones (iPhone 15) once the board started rendering at
+its correct, larger size. The user tried it and asked for a rollback
+("no queda bien") — it's reverted. Don't reintroduce vertical centering on
+`body` without asking first; the page is meant to sit top-aligned.
+
+## Mobile numpad: 3×3 grid on phones, single row of 9 on tablets
+
+The numpad went through a few iterations: originally a 3×3 grid sized like
+the desktop version (too tall to fit a phone viewport without scrolling),
+then a single row of 9 small buttons to solve that (fit, but felt cramped
+on phones), and settled on a breakpoint split: phones (`≤480px`) get a
+3×3 grid sized smaller than the original, tablets (`≤860px`, i.e. wider
+than a phone but still touch-sized) keep the single row of 9, which has
+enough width there to not feel cramped. If asked to tweak numpad sizing
+again, check which breakpoint is actually being tested against — "the
+numpad" means different CSS depending on viewport width.
+
+The board itself (and the numpad/history, to stay visually aligned with
+it) also isn't edge-to-edge on phones: it's inset to `min(28rem, 90%)`
+rather than 100%, because once the `#root` bug above was fixed and the
+board correctly filled the available width, it felt oversized/dominant on
+a phone screen. The topbar (title + language switch) shares that same 90%
+inset so it lines up with the board below it.
+
+## Per-difficulty timer: ticks while unsolved, freezes on completion
+
+`elapsedSeconds` lives on `puzzleState` (per day+difficulty, persisted like
+everything else there). A `useEffect` keyed on `[isSolved, seed,
+difficulty]` runs a `setInterval` that increments it once a second, but
+only while `!isSolved`; solving the puzzle lets the effect's cleanup clear
+the interval, freezing the value. This means the timer only counts time
+while the tab is open (browsers throttle/pause intervals in inactive
+background tabs) — a deliberate, simple choice over trying to track
+"real" elapsed wall-clock time with explicit pause/resume handling.
+`handleReset` zeroes `elapsedSeconds` (restarting a puzzle restarts its
+clock), but does **not** touch `scored`/`completedUnits` (same
+anti-farming reasoning as elsewhere) — so replaying an already-solved
+puzzle shows a live timer again but can't re-record a new history time.
+
+## Note highlighting: based on the selected cell's actual value
+
+When a cell that already has a value (given or filled) is selected,
+`highlightDigit` is computed from `board[selected.row][selected.col]` and
+every `cell__note` matching that digit anywhere else on the board gets a
+bold/accent-colored style. Selecting an *empty* cell clears the highlight
+(nothing to compare against). This piggybacks on the existing `selected`
+state rather than adding new state — if selection tracking ever changes,
+this highlight logic needs to move with it.
+
 ## CSS specificity bug worth remembering
 
 Early on, `.actions button` (element+class selector) accidentally
