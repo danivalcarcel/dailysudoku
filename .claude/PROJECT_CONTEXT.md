@@ -19,8 +19,10 @@ The app itself supports Spanish and English via `src/i18n.js`.
   single-purpose modules under `src/`. This was a deliberate choice each
   time (see `.claude/DECISIONS.md`), not an oversight — keep it that way
   unless there's a real reason to add a dependency.
-- Deployed as a static site (no server, no database, no accounts). All
-  persistence is the browser's `localStorage`.
+- Deployed as a static site (no real backend, no database, no accounts).
+  All persistence is the browser's `localStorage`. It's hosted on
+  **Cloudflare Workers** (static assets, SPA routing) — see
+  `.claude/DECISIONS.md` for how that was set up.
 
 ## Current feature set (as of this writing)
 
@@ -50,6 +52,8 @@ The app itself supports Spanish and English via `src/i18n.js`.
   numpad only on touch-sized viewports.
 - GitHub repo with a tag-triggered release workflow (see
   `.claude/DEV_SETUP.md`).
+- Live at https://dailysudoku.danivalcarcel.workers.dev/, deployed via
+  Cloudflare Workers (`npm run deploy` / `wrangler deploy`).
 
 ## How the user likes to work
 

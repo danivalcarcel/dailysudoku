@@ -4,10 +4,6 @@ None of this has been requested. It's context for "what might come next",
 not a to-do list — don't start implementing any of it without the user
 asking first.
 
-- **Deployment**: the app isn't hosted anywhere yet, only built locally and
-  released as a downloadable zip via GitHub Releases. GitHub Pages (via a
-  workflow step, or `gh-pages` branch) would be the natural next step if
-  the user wants a live URL to actually play from.
 - **Cross-device sync**: everything is `localStorage`-only right now, so
   progress/score/history don't follow a player between devices or browsers.
   Would require introducing a backend/accounts — a real architecture

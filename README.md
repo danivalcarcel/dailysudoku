@@ -4,6 +4,8 @@ A daily sudoku puzzle web app, in the spirit of Wordle: everyone who opens
 it on the same day gets the same puzzle, generated deterministically with
 no backend or database.
 
+**Live**: https://dailysudoku.danivalcarcel.workers.dev/
+
 ## Features
 
 - New puzzle every day, resetting at local midnight
@@ -41,6 +43,15 @@ npm run build
 ```
 
 Outputs a production build to `dist/`.
+
+## Deploy
+
+The app is hosted on Cloudflare Workers. To deploy manually (requires
+`wrangler login` first):
+
+```bash
+npm run deploy
+```
 
 ## Releases
 

@@ -105,3 +105,37 @@ A tag with a `-suffix` (like `-beta.1`, `-rc.1`) is published as a
 **pre-release** automatically; a clean `vX.Y.Z` tag is published as a
 normal release. The workflow builds the app, zips `dist/`, and attaches it
 to the GitHub release with auto-generated notes.
+
+## Live deployment (Cloudflare Workers)
+
+Live URL: **https://dailysudoku.danivalcarcel.workers.dev/**
+
+The project is connected to Cloudflare Workers through Cloudflare's GitHub
+App (set up by the user directly in the Cloudflare dashboard, not through
+this repo's own workflow). That integration auto-opened PR #1 ("Add
+Cloudflare Workers configuration"), which was reviewed and merged — see
+`.claude/DECISIONS.md`. That PR added:
+
+- `wrangler.jsonc` — Worker config (`name: "dailysudoku"`, SPA asset
+  routing via `not_found_handling: "single-page-application"`).
+- the `@cloudflare/vite-plugin` plugin in `vite.config.js`.
+- `wrangler` as a dependency, plus `preview`/`deploy` scripts in
+  `package.json`.
+
+To deploy manually from a local checkout:
+
+```bash
+npm run deploy
+```
+
+This runs `npm run build && wrangler deploy`. It requires being logged in
+to the Cloudflare account that owns this Worker (`wrangler login`) — ask
+the user to do that themselves the same way as `gh auth login`, don't try
+to script around it.
+
+There is currently **no CI step that deploys automatically** — deploys
+happen either by running `npm run deploy` locally, or through whatever
+Cloudflare's own GitHub integration does on pushes to `main` (check the
+Cloudflare dashboard link in PR #1 if that needs confirming). The GitHub
+Actions release workflow (above) is independent of this and only handles
+GitHub Releases, not deployment.

@@ -5,6 +5,7 @@ React + Vite static web app: a daily sudoku puzzle, generated deterministically
 persistence and a scoring system.
 
 Repo: https://github.com/danivalcarcel/dailysudoku (private)
+Live: https://dailysudoku.danivalcarcel.workers.dev/ (Cloudflare Workers)
 
 This file is the entry point. For the full context of how this project came
 to be and how to keep working on it, read the files in `.claude/`:
@@ -21,3 +22,4 @@ to be and how to keep working on it, read the files in `.claude/`:
 - All persistence is `localStorage`. There is no backend and no accounts.
 - UI text is in `src/i18n.js` (Spanish/English). Add new keys there, not inline strings.
 - Always verify UI changes in an actual browser (desktop + mobile viewport) before calling a task done — this project has consistently been developed that way.
+- Deployed on Cloudflare Workers (see `.claude/DEV_SETUP.md` for the deploy command and `.claude/DECISIONS.md` for how that integration came about).
