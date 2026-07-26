@@ -443,8 +443,8 @@ h1 {
 
 @media (max-width: 480px) {
   .app {
-    gap: 0.65rem;
-    padding: 0.6rem 0.4rem;
+    gap: 0.6rem;
+    padding: 0.4rem 0.2rem;
   }
 
   h1 {
