@@ -53,8 +53,9 @@ export function detectLocale() {
     // localStorage no disponible: se ignora
   }
 
-  const browserLocale = navigator.language?.slice(0, 2)
-  return LOCALES.includes(browserLocale) ? browserLocale : 'es'
+  // Espanol solo si el navegador esta en espanol; cualquier otro idioma
+  // (incluidos los que no soportamos) cae en ingles.
+  return navigator.language?.slice(0, 2) === 'es' ? 'es' : 'en'
 }
 
 export function persistLocale(locale) {
