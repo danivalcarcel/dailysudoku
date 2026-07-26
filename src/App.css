@@ -449,8 +449,13 @@ h1 {
 
   .board,
   .numpad,
-  .history {
+  .history,
+  .topbar {
     width: min(28rem, 90%);
+  }
+
+  .topbar {
+    margin-top: 0.4rem;
   }
 
   h1 {
@@ -462,6 +467,7 @@ h1 {
   }
 
   .score {
+    margin-top: -0.4rem;
     font-size: 0.85rem;
   }
 
