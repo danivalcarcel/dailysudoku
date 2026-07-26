@@ -4,7 +4,7 @@ import { loadPuzzleState, savePuzzleState } from './boardStorage'
 import { LOCALES, translations, detectLocale, persistLocale } from './i18n'
 import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } from './difficulties'
 import { loadScore, saveScore } from './score'
-import { loadHistory, addHistoryPoints } from './scoreHistory'
+import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
 import './App.css'
 
@@ -21,6 +21,12 @@ function createEmptyBoard(puzzle) {
 
 function createEmptyNotes(puzzle) {
   return puzzle.map((row) => row.map(() => []))
+}
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 function formatHistoryDate(dateStr, locale) {
@@ -44,6 +50,7 @@ function App() {
         notes: createEmptyNotes(puzzle),
         completedUnits: createEmptyCompletedUnits(),
         scored: false,
+        elapsedSeconds: 0,
       },
   )
   const [selected, setSelected] = useState({ row: 0, col: 0 })
@@ -73,6 +80,7 @@ function App() {
         notes: createEmptyNotes(puzzle),
         completedUnits: createEmptyCompletedUnits(),
         scored: false,
+        elapsedSeconds: 0,
       },
     )
     setSelected({ row: 0, col: 0 })
@@ -88,6 +96,7 @@ function App() {
       puzzleState.notes,
       puzzleState.completedUnits,
       puzzleState.scored,
+      puzzleState.elapsedSeconds,
     )
   }, [seed, difficulty, puzzleState])
 
@@ -103,6 +112,17 @@ function App() {
   const isGiven = (row, col) => puzzle[row][col] !== 0
 
   const isSolved = board.every((row, r) => row.every((cell, c) => Number(cell) === solution[r][c]))
+
+  // Cronometro: cuenta mientras el puzzle actual no este resuelto.
+  useEffect(() => {
+    if (isSolved) return
+
+    const id = setInterval(() => {
+      setPuzzleState((prev) => ({ ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }))
+    }, 1000)
+
+    return () => clearInterval(id)
+  }, [isSolved, seed, difficulty])
 
   // Otorga puntos por cada fila, columna o caja 3x3 que se complete correctamente
   // por primera vez (independiente de si el sudoku entero ya esta resuelto).
@@ -156,9 +176,10 @@ function App() {
       return next
     })
     setHistory(addHistoryPoints(seed, points))
+    setHistory(recordHistoryTime(seed, difficulty, puzzleState.elapsedSeconds))
     setPuzzleState((prev) => ({ ...prev, scored: true }))
     setJustScored(true)
-  }, [isSolved, puzzleState.scored, difficulty, seed])
+  }, [isSolved, puzzleState.scored, puzzleState.elapsedSeconds, difficulty, seed])
 
   const toggleNote = (row, col, digit) => {
     if (isGiven(row, col) || puzzleState.board[row][col] !== '') return
@@ -232,6 +253,7 @@ function App() {
       notes: createEmptyNotes(puzzle),
       completedUnits: prev.completedUnits,
       scored: prev.scored,
+      elapsedSeconds: 0,
     }))
     setJustScored(false)
   }
@@ -294,9 +316,15 @@ function App() {
         </div>
       </div>
 
-      <p className="score">
-        {t.scoreLabel}: <strong>{totalScore}</strong>
-      </p>
+      <div className="stats-row">
+        <p className="score">
+          {t.scoreLabel}: <strong>{totalScore}</strong>
+        </p>
+
+        <p className="timer">
+          {t.timeLabel}: <strong>{formatTime(puzzleState.elapsedSeconds)}</strong>
+        </p>
+      </div>
 
       <div className="difficulty-switch">
         {DIFFICULTIES.map((id) => (
@@ -423,15 +451,26 @@ function App() {
             )}
             {Object.entries(history)
               .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-              .map(([date, points]) => (
+              .map(([date, entry]) => (
                 <li key={date} className="history__row">
-                  <span>
-                    {formatHistoryDate(date, locale)}
-                    {date === seed && <span className="history__today"> ({t.historyToday})</span>}
-                  </span>
-                  <span>
-                    {points} {t.pointsSuffix}
-                  </span>
+                  <div className="history__row-main">
+                    <span>
+                      {formatHistoryDate(date, locale)}
+                      {date === seed && <span className="history__today"> ({t.historyToday})</span>}
+                    </span>
+                    <span>
+                      {entry.points} {t.pointsSuffix}
+                    </span>
+                  </div>
+                  {Object.keys(entry.times).length > 0 && (
+                    <div className="history__times">
+                      {DIFFICULTIES.filter((id) => entry.times[id] != null).map((id) => (
+                        <span key={id} className="history__time">
+                          {t.difficulties[id]}: {formatTime(entry.times[id])}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
           </ul>

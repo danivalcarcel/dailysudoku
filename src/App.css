@@ -99,6 +99,13 @@ h1 {
   font-size: 0.8rem;
 }
 
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
 .score {
   margin: 0;
   color: var(--color-muted);
@@ -108,6 +115,18 @@ h1 {
 .score strong {
   color: var(--color-accent);
   font-size: 1.05rem;
+}
+
+.timer {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.timer strong {
+  color: var(--color-border-strong);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .history {
@@ -148,11 +167,30 @@ h1 {
 
 .history__row {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 0.45rem 0;
   font-size: 0.9rem;
   color: var(--color-text);
+}
+
+.history__row-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.history__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.history__time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .history__row:not(:last-child) {

@@ -69,17 +69,18 @@ export function loadPuzzleState(date, difficulty, puzzle) {
         ? parsed.completedUnits
         : createEmptyCompletedUnits(),
       scored: Boolean(parsed.scored),
+      elapsedSeconds: Number.isFinite(parsed.elapsedSeconds) ? parsed.elapsedSeconds : 0,
     }
   } catch {
     return null
   }
 }
 
-export function savePuzzleState(date, difficulty, board, notes, completedUnits, scored) {
+export function savePuzzleState(date, difficulty, board, notes, completedUnits, scored, elapsedSeconds) {
   try {
     localStorage.setItem(
       buildKey(date, difficulty),
-      JSON.stringify({ board, notes, completedUnits, scored }),
+      JSON.stringify({ board, notes, completedUnits, scored, elapsedSeconds }),
     )
 
     const datePrefix = `${STORAGE_PREFIX}${date}:`
