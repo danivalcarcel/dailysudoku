@@ -21,8 +21,12 @@ asking first.
 - **Difficulty-aware hints**: nothing like "reveal one cell" or "check my
   current progress against the solution" beyond the always-on red-highlight
   validation exists.
-- **`App.jsx` size**: it's a single ~490-line component with no
+- **`App.jsx` size**: it's a single ~540-line component with no
   sub-components (growing steadily as features are added). Fine so far; if
   it keeps growing, splitting out the board grid and the numpad would be
   the natural refactor (see `.claude/ARCHITECTURE.md`) — don't do this
   preemptively.
+- **Configurable mistake limit / difficulty**: `MAX_MISTAKES` is a single
+  hardcoded constant (3) for every difficulty. Making it configurable per
+  difficulty (e.g. more forgiving on Easy) is a natural extension nobody's
+  asked for yet.

@@ -191,6 +191,45 @@ bold/accent-colored style. Selecting an *empty* cell clears the highlight
 state rather than adding new state — if selection tracking ever changes,
 this highlight logic needs to move with it.
 
+## Locale detection defaults to English, not Spanish, for unknown languages
+
+`detectLocale()` originally fell back to Spanish whenever the browser's
+language wasn't a recognized value in `LOCALES`. Changed so only an actual
+`es`-prefixed browser locale picks Spanish; every other value (French,
+German, unset, etc. — and English itself) picks English. A stored manual
+preference (from the language switcher) still overrides detection either
+way. If more languages are ever added to `LOCALES`, decide explicitly
+whether the "anything else defaults to English" fallback still applies or
+needs to become smarter (e.g. matching against each supported locale) —
+don't assume the current two-branch logic scales past two languages.
+
+## Mistake limit: locks the board, doesn't auto-reset it
+
+`MAX_MISTAKES = 3` in `App.jsx`. Only entering an actual wrong digit counts
+(`value !== '' && !isCorrectEntry` in `handleChange`) — erasing a cell
+never increments `mistakes`, so backspacing away a mistake doesn't erase
+the penalty (that's the point: mistakes are permanent for the attempt).
+`failed` is derived (`mistakes > MAX_MISTAKES`), not stored, so it's
+naturally in sync with the persisted count after a reload.
+
+On failure the board is **not** automatically cleared — it locks
+(`readOnly`, dimmed via `.board--locked`) with a message asking the player
+to press Reset themselves. This was a deliberate choice over auto-clearing
+immediately: the player gets a moment to see the state that lost them
+before it's wiped. `handleReset` zeroes `mistakes` along with the board/
+notes/timer, same as any other fresh attempt.
+
+The displayed counter caps at `MAX_MISTAKES`/`MAX_MISTAKES` (e.g. "3/3")
+even though the underlying count can reach `MAX_MISTAKES + 1` internally
+(that's what flips `failed`) — showing "4/3" would read as a bug rather
+than "you're over the limit". If the limit or its wording changes, keep
+that display cap in mind.
+
+Already-earned row/column/box points from before the failure are **not**
+clawed back (same anti-farming philosophy as elsewhere: earning is
+one-directional). Only the completion bonus is out of reach until a fresh,
+successful attempt.
+
 ## CSS specificity bug worth remembering
 
 Early on, `.actions button` (element+class selector) accidentally

@@ -13,7 +13,7 @@ src/
   difficulties.js         difficulty list + config (targetEmpty, unitPoints, completionPoints)
   sudokuCompletion.js      row/column/box completion checks used by the scoring system
 
-  boardStorage.js          persistence of {board, notes, completedUnits, scored, elapsedSeconds} per day+difficulty
+  boardStorage.js          persistence of {board, notes, completedUnits, scored, elapsedSeconds, mistakes} per day+difficulty
   score.js                 persistence of the lifetime total score
   scoreHistory.js          persistence of per-day {points, times: {difficulty: seconds}} (never pruned)
 
@@ -48,7 +48,7 @@ next refactor, but don't do it preemptively.
    - Returns `{ puzzle, solution }` as 9×9 arrays (0 = empty in `puzzle`).
 3. `App.jsx` calls this once per `difficulty` change (`useMemo`), then loads
    or creates a `puzzleState` object:
-   `{ board, notes, completedUnits, scored, elapsedSeconds }`.
+   `{ board, notes, completedUnits, scored, elapsedSeconds, mistakes }`.
    - `board`: 9×9 array of strings (`''` for empty, `'1'`-`'9'` for filled).
    - `notes`: 9×9 array of number arrays (candidate marks per cell).
    - `completedUnits`: `{ rows: bool[9], cols: bool[9], boxes: bool[9] }` —
@@ -56,11 +56,16 @@ next refactor, but don't do it preemptively.
    - `scored`: whether the whole-puzzle completion bonus was already given.
    - `elapsedSeconds`: seconds spent on the current attempt at this
      difficulty's puzzle; see the timer effect below.
+   - `mistakes`: count of wrong-digit entries this attempt (erasing doesn't
+     increment it). `failed = mistakes > MAX_MISTAKES` (3) is derived from
+     this each render, not stored separately — once `failed`, `handleChange`/
+     `toggleNote` no-op and every cell's `readOnly` becomes `given ||
+     failed`, locking the board until `handleReset`.
 4. Every `puzzleState` change is persisted via `savePuzzleState(seed,
-   difficulty, board, notes, completedUnits, scored, elapsedSeconds)`, keyed
-   by `daily-sudoku:board:<date>:<difficulty>`. Saving also deletes any
-   stored key for a *different date* (but keeps other difficulties for the
-   *same* date) — see `.claude/DECISIONS.md`.
+   difficulty, board, notes, completedUnits, scored, elapsedSeconds,
+   mistakes)`, keyed by `daily-sudoku:board:<date>:<difficulty>`. Saving
+   also deletes any stored key for a *different date* (but keeps other
+   difficulties for the *same* date) — see `.claude/DECISIONS.md`.
 5. Three independent `useEffect`s watch for scoring/timing events:
    - a timer effect that, while `!isSolved`, ticks a `setInterval` every
      second incrementing `elapsedSeconds` (cleared/frozen once solved);
@@ -106,6 +111,17 @@ Every cell's input also has `onMouseDown`/`onTouchStart` handlers that
 true})`, instead of letting the browser's default tap-to-focus run — see
 `.claude/DECISIONS.md` (iOS otherwise scrolls the page to "center" the
 tapped cell).
+
+## Puzzle date + reset countdown
+
+`getNextResetTime(date)` (in `sudokuGenerator.js`, alongside `getDailySeed`)
+returns the next `Date` at which `RESET_HOUR_UTC` occurs — today's if it
+hasn't passed yet, tomorrow's otherwise. `App.jsx` polls this every 30s
+into a `countdown` state (milliseconds remaining), formatted as `"9h
+52min"` — minute precision only, so a 30s poll is enough; don't tick this
+one every second like the per-puzzle timer. The displayed puzzle date
+(`formatDate(seed, locale)`) reuses `seed` (`getDailySeed()`'s result), not
+`new Date()`, for the reason in `.claude/DECISIONS.md`.
 
 ## Page shell (`body` / `#root`)
 

@@ -16,6 +16,7 @@ no backend or database.
   bold-highlighted when you select a filled cell
 - Automatic validation as you type (no "check" button)
 - A per-difficulty timer, recorded in the daily history
+- A mistake limit: 3 wrong entries and the board locks until you reset
 - Scoring: points for completing a row, column, or box, plus a bigger bonus
   for finishing the whole puzzle, with a lifetime total and a per-day history
 - English / Spanish

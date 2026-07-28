@@ -48,12 +48,25 @@ The app itself supports Spanish and English via `src/i18n.js`.
 - A per-difficulty timer: ticks every second while that difficulty's puzzle
   is unsolved, freezes on completion, persists across reloads, and the
   final time is recorded in the daily history.
+- A mistake limit: entering a **wrong** digit (erasing doesn't count)
+  increments a persisted per-difficulty counter, shown as "Fallos: X/3".
+  On the 4th mistake the puzzle is lost — the board locks (read-only,
+  dimmed) and a message tells the player to press Reset, which clears the
+  mistake count for a fresh attempt.
+- The current puzzle's date and a countdown to the next one are shown
+  under the title, e.g. "Sudoku del 26 jul 2026 · Próximo en 9h 52min" —
+  both derived from the same UTC-shifted seed logic, not the browser's
+  raw local date (see `.claude/DECISIONS.md` for why that distinction
+  matters).
 - Scoring: points for completing a row, column, or box (see
   `.claude/DECISIONS.md` for why columns were added), plus a larger bonus
   for finishing the whole puzzle. A running lifetime total and a per-day
   history (points + per-difficulty times) are both persisted and never
   reset.
-- i18n (ES/EN) with a language switcher, persisted preference.
+- i18n (ES/EN) with a language switcher, persisted preference; auto-detects
+  from the browser but only picks Spanish for an actual Spanish browser
+  locale — everything else (including unsupported languages) defaults to
+  English.
 - Local progress persistence per day+difficulty (board, notes, which
   units/whole-puzzle have already been scored, elapsed time) so a reload
   never loses progress or double-awards points.
