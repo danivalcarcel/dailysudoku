@@ -542,8 +542,11 @@ h1 {
     display: none;
   }
 
-  .score {
+  .stats-row {
     margin-top: -0.4rem;
+  }
+
+  .score {
     font-size: 0.85rem;
   }
 
