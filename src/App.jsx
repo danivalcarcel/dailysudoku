@@ -15,6 +15,8 @@ const ARROW_DELTAS = {
   ArrowRight: [0, 1],
 }
 
+const MAX_MISTAKES = 3
+
 function createEmptyBoard(puzzle) {
   return puzzle.map((row) => row.map((cell) => (cell === 0 ? '' : String(cell))))
 }
@@ -58,6 +60,7 @@ function App() {
         completedUnits: createEmptyCompletedUnits(),
         scored: false,
         elapsedSeconds: 0,
+        mistakes: 0,
       },
   )
   const [selected, setSelected] = useState({ row: 0, col: 0 })
@@ -89,6 +92,7 @@ function App() {
         completedUnits: createEmptyCompletedUnits(),
         scored: false,
         elapsedSeconds: 0,
+        mistakes: 0,
       },
     )
     setSelected({ row: 0, col: 0 })
@@ -105,6 +109,7 @@ function App() {
       puzzleState.completedUnits,
       puzzleState.scored,
       puzzleState.elapsedSeconds,
+      puzzleState.mistakes,
     )
   }, [seed, difficulty, puzzleState])
 
@@ -131,21 +136,25 @@ function App() {
 
   const isSolved = board.every((row, r) => row.every((cell, c) => Number(cell) === solution[r][c]))
 
+  // Se pierde la partida al superar el limite de fallos: el tablero se
+  // bloquea hasta que se pulse Reiniciar.
+  const failed = puzzleState.mistakes > MAX_MISTAKES
+
   // Numero de la casilla seleccionada (si tiene valor), para resaltarlo entre
   // las notas del resto de casillas y facilitar la comparacion.
   const selectedValue = board[selected.row][selected.col]
   const highlightDigit = selectedValue !== '' ? Number(selectedValue) : null
 
-  // Cronometro: cuenta mientras el puzzle actual no este resuelto.
+  // Cronometro: cuenta mientras el puzzle actual no este resuelto ni perdido.
   useEffect(() => {
-    if (isSolved) return
+    if (isSolved || failed) return
 
     const id = setInterval(() => {
       setPuzzleState((prev) => ({ ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }))
     }, 1000)
 
     return () => clearInterval(id)
-  }, [isSolved, seed, difficulty])
+  }, [isSolved, failed, seed, difficulty])
 
   // Otorga puntos por cada fila, columna o caja 3x3 que se complete correctamente
   // por primera vez (independiente de si el sudoku entero ya esta resuelto).
@@ -205,7 +214,7 @@ function App() {
   }, [isSolved, puzzleState.scored, puzzleState.elapsedSeconds, difficulty, seed])
 
   const toggleNote = (row, col, digit) => {
-    if (isGiven(row, col) || puzzleState.board[row][col] !== '') return
+    if (failed || isGiven(row, col) || puzzleState.board[row][col] !== '') return
 
     setPuzzleState((prev) => {
       const cellNotes = prev.notes[row][col]
@@ -228,7 +237,7 @@ function App() {
   }
 
   const handleChange = (row, col, value) => {
-    if (isGiven(row, col)) return
+    if (failed || isGiven(row, col)) return
     if (value !== '' && !/^[1-9]$/.test(value)) return
 
     if (notesMode) {
@@ -244,7 +253,9 @@ function App() {
       // candidato del resto de la fila, columna y bloque 3x3 (y de la propia casilla).
       const isCorrectEntry = value !== '' && Number(value) === solution[row][col]
       if (!isCorrectEntry) {
-        return { ...prev, board: nextBoard }
+        // Una casilla vacia (borrar) no cuenta como fallo, solo un digito incorrecto.
+        const mistakes = value !== '' ? prev.mistakes + 1 : prev.mistakes
+        return { ...prev, board: nextBoard, mistakes }
       }
 
       const nextNotes = prev.notes.map((r) => [...r])
@@ -277,6 +288,7 @@ function App() {
       completedUnits: prev.completedUnits,
       scored: prev.scored,
       elapsedSeconds: 0,
+      mistakes: 0,
     }))
     setJustScored(false)
   }
@@ -350,6 +362,13 @@ function App() {
         <p className="timer">
           {t.timeLabel}: <strong>{formatTime(puzzleState.elapsedSeconds)}</strong>
         </p>
+
+        <p className="mistakes">
+          {t.mistakesLabel}:{' '}
+          <strong className={puzzleState.mistakes > 0 ? 'mistakes__value--warn' : ''}>
+            {Math.min(puzzleState.mistakes, MAX_MISTAKES)}/{MAX_MISTAKES}
+          </strong>
+        </p>
       </div>
 
       <div className="difficulty-switch">
@@ -365,7 +384,7 @@ function App() {
         ))}
       </div>
 
-      <div className="board">
+      <div className={`board${failed ? ' board--locked' : ''}`}>
         {board.map((row, r) =>
           row.map((cell, c) => {
             const given = isGiven(r, c)
@@ -409,7 +428,7 @@ function App() {
                   inputMode="none"
                   maxLength={1}
                   value={cell}
-                  readOnly={given}
+                  readOnly={given || failed}
                   onChange={(e) => handleChange(r, c, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, r, c)}
                   onFocus={() => setSelected({ row: r, col: c })}
@@ -450,6 +469,12 @@ function App() {
               +{DIFFICULTY_CONFIG[difficulty].completionPoints} {t.pointsSuffix}
             </p>
           )}
+        </div>
+      )}
+
+      {failed && (
+        <div className="message message--error">
+          <p>{t.gameOver}</p>
         </div>
       )}
 

@@ -136,6 +136,21 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+.mistakes {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.mistakes strong {
+  color: var(--color-border-strong);
+  font-size: 1.05rem;
+}
+
+.mistakes__value--warn {
+  color: var(--color-wrong-text);
+}
+
 .history {
   display: flex;
   flex-direction: column;
@@ -259,6 +274,12 @@ h1 {
   box-shadow:
     0 25px 50px -22px rgba(30, 41, 59, 0.45),
     0 0 0 2px var(--color-border-strong);
+  transition: opacity 0.2s ease;
+}
+
+.board--locked {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .cell {
@@ -388,6 +409,11 @@ h1 {
 .message--ok {
   background: var(--color-success-bg);
   color: var(--color-success-text);
+}
+
+.message--error {
+  background: var(--color-wrong-bg);
+  color: var(--color-wrong-text);
 }
 
 .actions {
