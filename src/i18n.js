@@ -26,6 +26,9 @@ export const translations = {
     nicknameInvalid: 'Usa 3-20 letras, números, espacios o guiones bajos',
     nicknameTaken: 'Ese apodo ya está en uso',
     authError: 'No se pudo iniciar sesión, inténtalo de nuevo',
+    leaderboardLabel: 'Ranking de hoy',
+    leaderboardEmpty: 'Aún nadie ha puntuado hoy.',
+    leaderboardYou: 'tú',
     difficulties: {
       easy: 'Fácil',
       medium: 'Medio',
@@ -58,6 +61,9 @@ export const translations = {
     nicknameInvalid: 'Use 3-20 letters, numbers, spaces or underscores',
     nicknameTaken: 'That nickname is already taken',
     authError: "Couldn't sign in, please try again",
+    leaderboardLabel: "Today's ranking",
+    leaderboardEmpty: 'No one has scored today yet.',
+    leaderboardYou: 'you',
     difficulties: {
       easy: 'Easy',
       medium: 'Medium',

@@ -6,7 +6,7 @@ import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } 
 import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
 import { fetchMe, loginWithGoogle, logout, renderGoogleButton, setNickname } from './auth'
-import { fetchProgress, saveProgress, fetchHistory, saveHistoryEntry } from './sync'
+import { fetchProgress, saveProgress, fetchHistory, saveHistoryEntry, fetchLeaderboard } from './sync'
 import './App.css'
 
 const ARROW_DELTAS = {
@@ -75,6 +75,8 @@ function App() {
   const [auth, setAuth] = useState({ status: 'loading' })
   const [nicknameInput, setNicknameInput] = useState('')
   const [nicknameError, setNicknameError] = useState('')
+  const [leaderboard, setLeaderboard] = useState([])
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const cellRefs = useRef(Array.from({ length: 9 }, () => Array(9).fill(null)))
   const toastTimeoutRef = useRef(null)
   const googleButtonRef = useRef(null)
@@ -235,15 +237,26 @@ function App() {
     persistDifficulty(difficulty)
   }, [difficulty])
 
-  // Cuenta atras hasta el proximo cambio de puzzle (misma hora UTC para todos).
-  // Solo se muestra con precision de minutos, asi que no hace falta tick por segundo.
+  const refreshLeaderboard = () => {
+    fetchLeaderboard(seed).then(({ ok, body }) => {
+      if (ok) setLeaderboard(body.leaderboard)
+    })
+  }
+
+  // Cuenta atras hasta el proximo cambio de puzzle (misma hora UTC para todos),
+  // y refresco del ranking de hoy en el mismo intervalo (no hace falta mas
+  // frecuencia que esto, solo se muestra con precision de minutos/puntos).
   useEffect(() => {
+    refreshLeaderboard()
+
     const id = setInterval(() => {
       setCountdown(getNextResetTime().getTime() - Date.now())
+      refreshLeaderboard()
     }, 30000)
 
     return () => clearInterval(id)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed])
 
   const todayScore = history[seed]?.points ?? 0
 
@@ -300,7 +313,11 @@ function App() {
     const points = newlyCompleted * DIFFICULTY_CONFIG[difficulty].unitPoints
     const nextHistory = addHistoryPoints(seed, points)
     setHistory(nextHistory)
-    if (auth.status === 'in') saveHistoryEntry(seed, nextHistory[seed]).catch(() => {})
+    if (auth.status === 'in') {
+      saveHistoryEntry(seed, nextHistory[seed])
+        .then(refreshLeaderboard)
+        .catch(() => {})
+    }
     setPuzzleState((prev) => ({
       ...prev,
       completedUnits: { rows: nextRows, cols: nextCols, boxes: nextBoxes },
@@ -317,7 +334,11 @@ function App() {
     addHistoryPoints(seed, points)
     const nextHistory = recordHistoryTime(seed, difficulty, puzzleState.elapsedSeconds)
     setHistory(nextHistory)
-    if (auth.status === 'in') saveHistoryEntry(seed, nextHistory[seed]).catch(() => {})
+    if (auth.status === 'in') {
+      saveHistoryEntry(seed, nextHistory[seed])
+        .then(refreshLeaderboard)
+        .catch(() => {})
+    }
     setPuzzleState((prev) => ({ ...prev, scored: true }))
     setJustScored(true)
   }, [isSolved, puzzleState.scored, puzzleState.elapsedSeconds, difficulty, seed, auth.status])
@@ -666,6 +687,43 @@ function App() {
                   )}
                 </li>
               ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="leaderboard">
+        <button
+          type="button"
+          className="leaderboard__toggle"
+          onClick={() => setLeaderboardOpen((prev) => !prev)}
+        >
+          {t.leaderboardLabel} {leaderboardOpen ? '▲' : '▼'}
+        </button>
+
+        {leaderboardOpen && (
+          <ul className="leaderboard__list">
+            {leaderboard.length === 0 && <li className="leaderboard__empty">{t.leaderboardEmpty}</li>}
+            {leaderboard.map((entry, index) => (
+              <li
+                key={entry.nickname}
+                className={`leaderboard__row${
+                  auth.status === 'in' && entry.nickname === auth.nickname
+                    ? ' leaderboard__row--you'
+                    : ''
+                }`}
+              >
+                <span className="leaderboard__rank">{index + 1}</span>
+                <span className="leaderboard__nickname">
+                  {entry.nickname}
+                  {auth.status === 'in' && entry.nickname === auth.nickname && (
+                    <span className="leaderboard__you-tag"> ({t.leaderboardYou})</span>
+                  )}
+                </span>
+                <span className="leaderboard__points">
+                  {entry.points} {t.pointsSuffix}
+                </span>
+              </li>
+            ))}
           </ul>
         )}
       </div>

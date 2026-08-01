@@ -22,3 +22,7 @@ export function fetchHistory() {
 export function saveHistoryEntry(date, entry) {
   return apiRequest(`/api/history/${date}`, { method: 'PUT', body: JSON.stringify(entry) })
 }
+
+export function fetchLeaderboard(date) {
+  return apiRequest(`/api/leaderboard/${date}`)
+}

@@ -232,6 +232,30 @@ unconditionally regardless of login state — it's a passive local cache of
 just-synced-down-from-remote data), not something that gets bypassed when
 logged in. This keeps the logged-out code path byte-for-byte unchanged.
 
+### Daily leaderboard (`GET /api/leaderboard/:date`, `src/sync.js`'s
+`fetchLeaderboard`)
+
+Deliberately **not** behind `requireAuth` — it only ever returns
+self-chosen nicknames and points (never email or any other real-identity
+field), so there's no privacy reason to require a session just to read it.
+The query is a straight `history JOIN users ON user_id`, filtered to
+`nickname IS NOT NULL` (an account that hasn't picked one yet is invisible
+on the board, not shown with a placeholder), ordered by points descending,
+capped at `LEADERBOARD_LIMIT` (10). "Today" here means whatever `:date`
+the frontend passes — always `seed` (`getDailySeed()`'s result), so the
+board changes over to a new empty ranking at the same `RESET_HOUR_UTC`
+moment the puzzle itself does, no separate reset logic needed.
+
+`App.jsx` refreshes it in the same 30s `setInterval` that already drove the
+puzzle-reset countdown (one timer, two things it refreshes, rather than a
+second interval) plus once immediately after the two scoring effects
+successfully push a `saveHistoryEntry` — so your own new score appears on
+the board right away instead of waiting up to 30s. The current player's own
+row is highlighted (`leaderboard__row--you`, a "(tú)"/"(you)" tag) by
+matching `entry.nickname === auth.nickname` — nickname equality is enough
+since nicknames are enforced unique server-side (`PUT /api/nickname`'s
+case-insensitive clash check).
+
 ## Page shell (`body` / `#root`)
 
 `index.css` centers the app card horizontally: `body` is

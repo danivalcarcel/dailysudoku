@@ -197,6 +197,26 @@ app.put('/api/history/:date', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
+const LEADERBOARD_LIMIT = 10
+
+// Publica a proposito (sin requireAuth): solo expone apodos elegidos por el
+// propio usuario, nunca el email/nombre real de Google.
+app.get('/api/leaderboard/:date', async (c) => {
+  const { date } = c.req.param()
+  const { results } = await c.env.DB.prepare(
+    `SELECT u.nickname AS nickname, h.points AS points
+     FROM history h
+     JOIN users u ON u.id = h.user_id
+     WHERE h.date = ? AND u.nickname IS NOT NULL
+     ORDER BY h.points DESC, u.nickname ASC
+     LIMIT ?`,
+  )
+    .bind(date, LEADERBOARD_LIMIT)
+    .all()
+
+  return c.json({ leaderboard: results })
+})
+
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw))
 
 export default app
