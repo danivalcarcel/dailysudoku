@@ -12,5 +12,12 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dailysudoku-db",
+      "database_id": "59cb6be6-b046-4aaa-80c6-0506527a5430"
+    }
   ]
 }

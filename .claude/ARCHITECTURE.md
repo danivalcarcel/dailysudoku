@@ -18,6 +18,10 @@ src/
 
   i18n.js                  translations dict (es/en) + locale detection/persistence
 
+worker/
+  index.js                 Worker entry point (Hono): /api/* routes, everything else falls through to env.ASSETS
+  schema.sql                D1 table definitions (users, progress, history)
+
 .github/workflows/release.yml   tag-triggered build + GitHub release
 .claude/launch.json              dev server config for the Claude Code browser preview
 ```
@@ -123,6 +127,34 @@ into a `countdown` state (milliseconds remaining), formatted as `"9h
 one every second like the per-puzzle timer. The displayed puzzle date
 (`formatDate(seed, locale)`) reuses `seed` (`getDailySeed()`'s result), not
 `new Date()`, for the reason in `.claude/DECISIONS.md`.
+
+## Backend: Worker API + D1 (cloud sync, in progress)
+
+`wrangler.jsonc`'s `"main": "./worker/index.js"` mounts a Hono app
+alongside the existing static-asset serving: requests are dispatched to
+the Worker first, and its `notFound` handler falls through to
+`env.ASSETS.fetch(request)` (the `"assets": {"binding": "ASSETS"}` config)
+for anything it doesn't explicitly route — so the SPA keeps being served
+exactly as before for every non-`/api/*` path. This is confirmed to work in
+the `npm run dev` server itself (not just `wrangler dev`/preview) for
+`fetch()`-style requests; a *full browser navigation* straight to an
+`/api/*` path is a dev-server-only edge case that doesn't matter in
+practice (the app only ever reaches `/api/*` via `fetch`, never by
+navigating the browser there).
+
+D1 (`"d1_databases"` binding `DB`, database `dailysudoku-db`) holds three
+tables mirroring the existing `localStorage` shapes 1:1 (`worker/schema.sql`):
+`users` (by Google `sub`, nullable `nickname` until chosen), `progress`
+(same fields as `boardStorage.js`, keyed by `user_id`+date+difficulty), and
+`history` (same fields as `scoreHistory.js`, keyed by `user_id`+date).
+Scoring/validation logic itself is not moving server-side — the backend is
+a sync transport, not a rewrite. See `.claude/DECISIONS.md` for why this
+backend exists at all and `.claude/BACKEND_IDEA.md`'s original sketch for
+the open questions that were resolved to get here (migration policy,
+conflict policy, leaderboard scope). Schema changes are applied by hand
+with `wrangler d1 execute dailysudoku-db --file=worker/schema.sql` (add
+`--remote` for production; local dev uses a separate local D1 emulation
+under `.wrangler/state/`, so a schema change needs applying to *both*).
 
 ## Page shell (`body` / `#root`)
 

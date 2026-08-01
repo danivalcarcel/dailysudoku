@@ -111,6 +111,34 @@ A tag with a `-suffix` (like `-beta.1`, `-rc.1`) is published as a
 normal release. The workflow builds the app, zips `dist/`, and attaches it
 to the GitHub release with auto-generated notes.
 
+## Backend: D1 database (cloud sync)
+
+The Worker API (`worker/index.js`) uses a Cloudflare D1 database, bound as
+`DB` in `wrangler.jsonc`. This is separate from `wrangler login` (below) —
+D1 access also needs `wrangler login` to have run first, then:
+
+```bash
+npx wrangler d1 create dailysudoku-db
+```
+
+prints a `database_id` to paste into the `"d1_databases"` block of
+`wrangler.jsonc` (already done for this project — `dailysudoku-db`,
+region WEUR). To apply `worker/schema.sql` (needed once, and again after
+any schema change) to **both** the local dev emulation and the real
+production database:
+
+```bash
+npx wrangler d1 execute dailysudoku-db --local --file=worker/schema.sql
+```
+
+```bash
+npx wrangler d1 execute dailysudoku-db --remote --file=worker/schema.sql
+```
+
+`npm run dev` (the Vite dev server) proxies `/api/*` requests to the actual
+Worker code and the local D1 emulation — no separate `wrangler dev` needed
+for day-to-day API development.
+
 ## Live deployment (Cloudflare Workers)
 
 Live URL: **https://dailysudoku.danivalcarcel.workers.dev/**
