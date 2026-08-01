@@ -156,6 +156,42 @@ with `wrangler d1 execute dailysudoku-db --file=worker/schema.sql` (add
 `--remote` for production; local dev uses a separate local D1 emulation
 under `.wrangler/state/`, so a schema change needs applying to *both*).
 
+### Auth (Google Identity Services + a self-signed session cookie)
+
+`worker/auth.js` has two independent jobs, both via `jose` (edge-compatible
+JWT library):
+
+- **Verifying Google's ID token** (`verifyGoogleCredential`): checks it
+  against Google's own JWKS (`createRemoteJWKSet`, auto-fetched/cached by
+  `jose`), validating `iss`/`aud`/`exp`. `aud` must match
+  `GOOGLE_CLIENT_ID` — a non-secret value committed directly in
+  `wrangler.jsonc`'s `vars` (OAuth client IDs are meant to be public,
+  embedded in every page load) and duplicated as a literal in
+  `src/auth.js` for the frontend's `google.accounts.id.initialize` call.
+- **Our own session** (`createSessionToken`/`verifySessionToken`): a
+  stateless HS256 JWT (`{ uid }`, 60-day expiry) signed with
+  `SESSION_SECRET` — a real secret, set via `wrangler secret put` for
+  production and `.dev.vars` (gitignored; `.dev.vars.example` documents the
+  key) for local dev. No sessions table: revocation would mean rotating
+  the secret (logging out everyone), an accepted tradeoff for a casual
+  game — see `.claude/DECISIONS.md`.
+
+`POST /api/auth/google` upserts the `users` row by `google_sub` (email
+refreshed on every login, nickname left untouched) and sets the session as
+an HttpOnly/Secure/SameSite=Lax cookie (`hono/cookie`'s
+`getCookie`/`setCookie`/`deleteCookie`). `requireAuth` (a Hono middleware
+in `worker/index.js`) reads and verifies that cookie for any route that
+needs a logged-in user, attaching the user id via `c.set('userId', ...)`.
+
+Frontend side: `src/auth.js` exports `renderGoogleButton` (calls
+`google.accounts.id.initialize`/`renderButton` once the GIS script — loaded
+via a `<script>` tag in `index.html`, not an npm package — has finished
+loading) plus thin `fetch`-wrapper functions for each endpoint. `App.jsx`
+tracks session state as `auth: { status: 'loading'|'out'|'needsNickname'|'in',
+nickname? }`, fetching `/api/me` on mount and polling for `window.google`
+readiness (the script is `async defer`, so it may not exist yet on first
+render) before rendering the sign-in button.
+
 ## Page shell (`body` / `#root`)
 
 `index.css` centers the app card horizontally: `body` is

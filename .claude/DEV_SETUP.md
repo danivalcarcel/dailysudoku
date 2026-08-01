@@ -139,6 +139,33 @@ npx wrangler d1 execute dailysudoku-db --remote --file=worker/schema.sql
 Worker code and the local D1 emulation — no separate `wrangler dev` needed
 for day-to-day API development.
 
+## Backend: Google sign-in
+
+Two values the Worker needs, of different sensitivity:
+
+- **`GOOGLE_CLIENT_ID`** — not a secret (OAuth client IDs are meant to be
+  public), so it's committed directly in `wrangler.jsonc`'s `"vars"` and
+  duplicated as a literal in `src/auth.js` for the frontend. Created once
+  in Google Cloud Console → APIs & Services → Credentials → OAuth client ID
+  → **Web application**, with Authorized JavaScript origins for both
+  `http://localhost:5173` and the production URL. Only the user can create
+  this (needs their own Google account) — if it ever needs to change,
+  ask them for a new one rather than trying to script around it.
+- **`SESSION_SECRET`** — a real secret (signs our own session cookie, see
+  `.claude/ARCHITECTURE.md`). Local dev reads it from `.dev.vars`
+  (gitignored; `.dev.vars.example` shows the expected key). Production is
+  set with:
+
+  ```bash
+  npx wrangler secret put SESSION_SECRET
+  ```
+
+  (pipe a random value into it rather than typing one, e.g.
+  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+  Rotating it invalidates every existing session (everyone gets logged
+  out) — that's an accepted tradeoff, not a bug, given there's no sessions
+  table to selectively revoke.
+
 ## Live deployment (Cloudflare Workers)
 
 Live URL: **https://dailysudoku.danivalcarcel.workers.dev/**

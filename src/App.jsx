@@ -5,6 +5,7 @@ import { LOCALES, translations, detectLocale, persistLocale } from './i18n'
 import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } from './difficulties'
 import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
+import { fetchMe, loginWithGoogle, logout, renderGoogleButton, setNickname } from './auth'
 import './App.css'
 
 const ARROW_DELTAS = {
@@ -70,8 +71,12 @@ function App() {
   const [justScored, setJustScored] = useState(false)
   const [toast, setToast] = useState(null)
   const [countdown, setCountdown] = useState(() => getNextResetTime().getTime() - Date.now())
+  const [auth, setAuth] = useState({ status: 'loading' })
+  const [nicknameInput, setNicknameInput] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
   const cellRefs = useRef(Array.from({ length: 9 }, () => Array(9).fill(null)))
   const toastTimeoutRef = useRef(null)
+  const googleButtonRef = useRef(null)
   const t = translations[locale]
   const board = puzzleState.board
 
@@ -79,6 +84,72 @@ function App() {
     clearTimeout(toastTimeoutRef.current)
     setToast(message)
     toastTimeoutRef.current = setTimeout(() => setToast(null), 1800)
+  }
+
+  // Sesion actual (si la hay) al cargar la app.
+  useEffect(() => {
+    fetchMe().then(({ ok, body }) => {
+      if (!ok) {
+        setAuth({ status: 'out' })
+        return
+      }
+      setAuth(
+        body.needsNickname
+          ? { status: 'needsNickname' }
+          : { status: 'in', nickname: body.nickname },
+      )
+    })
+  }, [])
+
+  // El script de Google Identity Services carga de forma asincrona
+  // (async/defer en index.html), asi que se reintenta hasta que este listo.
+  useEffect(() => {
+    if (auth.status !== 'out') return
+
+    let cancelled = false
+    const tryRender = () => {
+      if (cancelled) return
+      if (window.google?.accounts?.id && googleButtonRef.current) {
+        renderGoogleButton(googleButtonRef.current, handleGoogleCredential)
+      } else {
+        setTimeout(tryRender, 100)
+      }
+    }
+    tryRender()
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.status])
+
+  const handleGoogleCredential = async (credential) => {
+    const { ok, body } = await loginWithGoogle(credential)
+    if (!ok) {
+      showToast(t.authError)
+      return
+    }
+    setAuth(
+      body.needsNickname ? { status: 'needsNickname' } : { status: 'in', nickname: body.nickname },
+    )
+  }
+
+  const handleNicknameSubmit = async (e) => {
+    e.preventDefault()
+    const { ok, body } = await setNickname(nicknameInput.trim())
+    if (!ok) {
+      setNicknameError(body?.error === 'taken' ? t.nicknameTaken : t.nicknameInvalid)
+      return
+    }
+    setNicknameError('')
+    setAuth({ status: 'in', nickname: body.nickname })
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    setNicknameInput('')
+    setNicknameError('')
+    setAuth({ status: 'out' })
   }
 
   // Al cambiar de dificultad se carga (o crea) el progreso de ese puzzle.
@@ -342,6 +413,36 @@ function App() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="auth">
+        {auth.status === 'out' && <div ref={googleButtonRef} className="auth__google-btn" />}
+
+        {auth.status === 'needsNickname' && (
+          <form className="auth__nickname" onSubmit={handleNicknameSubmit}>
+            <p>{t.nicknamePrompt}</p>
+            <div className="auth__nickname-row">
+              <input
+                type="text"
+                value={nicknameInput}
+                onChange={(e) => setNicknameInput(e.target.value)}
+                placeholder={t.nicknamePlaceholder}
+                maxLength={20}
+              />
+              <button type="submit">{t.nicknameSave}</button>
+            </div>
+            {nicknameError && <p className="auth__error">{nicknameError}</p>}
+          </form>
+        )}
+
+        {auth.status === 'in' && (
+          <p className="auth__status">
+            {t.loggedInAs} <strong>{auth.nickname}</strong>
+            <button type="button" className="auth__signout" onClick={handleLogout}>
+              {t.signOut}
+            </button>
+          </p>
+        )}
       </div>
 
       <div className="stats-row">
