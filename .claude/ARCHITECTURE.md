@@ -192,6 +192,46 @@ nickname? }`, fetching `/api/me` on mount and polling for `window.google`
 readiness (the script is `async defer`, so it may not exist yet on first
 render) before rendering the sign-in button.
 
+`src/apiClient.js` holds the one `fetch` wrapper (`apiRequest`: always
+`credentials: 'include'`, never throws on non-2xx) that both `auth.js` and
+`sync.js` build on, so there's a single place that knows how to talk to the
+Worker.
+
+### Progress/history sync (`worker/index.js`'s `/api/progress`,
+`/api/history` routes + `src/sync.js`)
+
+Both behind `requireAuth`. `GET/PUT /api/progress/:date/:difficulty` and
+`GET /api/history` / `PUT /api/history/:date` are near-literal transports
+over the `progress`/`history` D1 tables — JSON columns
+(`board`/`notes`/`completed_units`/`times`) round-trip via
+`JSON.stringify`/`JSON.parse`, everything else is a plain column. Both PUT
+routes use SQLite's `INSERT ... ON CONFLICT DO UPDATE` (upsert) against the
+tables' composite primary keys — there is no read-modify-write, no version
+check, no merge: whichever `PUT` reaches the server last simply overwrites.
+This is what makes "last device to write wins" true without any explicit
+conflict-resolution code (see `.claude/DECISIONS.md`).
+
+`App.jsx` wires this in three places:
+
+1. A `useEffect` keyed on `[auth.status, seed, difficulty]` that, only when
+   `auth.status === 'in'`, fetches remote progress+history and
+   **unconditionally overwrites** local React state with whatever the
+   server returns (an empty/default state if the server has nothing yet)
+   — the "backend is authoritative" decision applied consistently, not
+   just at first login.
+2. The existing `savePuzzleState` effect additionally calls
+   `saveProgress(...)` (fire-and-forget, `.catch(() => {})`) whenever
+   logged in — so every local save also becomes a remote save.
+3. Both scoring effects (`addHistoryPoints`/`recordHistoryTime`) additionally
+   call `saveHistoryEntry(seed, ...)` with just that date's updated entry,
+   same fire-and-forget pattern.
+
+`localStorage` (`boardStorage.js`/`scoreHistory.js`) keeps being written to
+unconditionally regardless of login state — it's a passive local cache of
+"whatever the last known state was" (be that locally-played or
+just-synced-down-from-remote data), not something that gets bypassed when
+logged in. This keeps the logged-out code path byte-for-byte unchanged.
+
 ## Page shell (`body` / `#root`)
 
 `index.css` centers the app card horizontally: `body` is

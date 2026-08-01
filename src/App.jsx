@@ -6,6 +6,7 @@ import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } 
 import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
 import { fetchMe, loginWithGoogle, logout, renderGoogleButton, setNickname } from './auth'
+import { fetchProgress, saveProgress, fetchHistory, saveHistoryEntry } from './sync'
 import './App.css'
 
 const ARROW_DELTAS = {
@@ -169,6 +170,38 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty])
 
+  // Backend autoritativo: al iniciar sesion (o al cambiar de dificultad ya
+  // logueado) se descarta el progreso/historial local de este dispositivo
+  // en favor de lo que diga el servidor (ver .claude/DECISIONS.md).
+  useEffect(() => {
+    if (auth.status !== 'in') return
+
+    let cancelled = false
+
+    fetchProgress(seed, difficulty).then(({ ok, body }) => {
+      if (cancelled || !ok) return
+      setPuzzleState(
+        body.progress ?? {
+          board: createEmptyBoard(puzzle),
+          notes: createEmptyNotes(puzzle),
+          completedUnits: createEmptyCompletedUnits(),
+          scored: false,
+          elapsedSeconds: 0,
+          mistakes: 0,
+        },
+      )
+    })
+
+    fetchHistory().then(({ ok, body }) => {
+      if (!cancelled && ok) setHistory(body.history)
+    })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.status, seed, difficulty])
+
   useEffect(() => {
     savePuzzleState(
       seed,
@@ -180,7 +213,18 @@ function App() {
       puzzleState.elapsedSeconds,
       puzzleState.mistakes,
     )
-  }, [seed, difficulty, puzzleState])
+
+    if (auth.status === 'in') {
+      saveProgress(seed, difficulty, {
+        board: puzzleState.board,
+        notes: puzzleState.notes,
+        completedUnits: puzzleState.completedUnits,
+        scored: puzzleState.scored,
+        elapsedSeconds: puzzleState.elapsedSeconds,
+        mistakes: puzzleState.mistakes,
+      }).catch(() => {})
+    }
+  }, [seed, difficulty, puzzleState, auth.status])
 
   useEffect(() => {
     persistLocale(locale)
@@ -254,7 +298,9 @@ function App() {
     if (newlyCompleted === 0) return
 
     const points = newlyCompleted * DIFFICULTY_CONFIG[difficulty].unitPoints
-    setHistory(addHistoryPoints(seed, points))
+    const nextHistory = addHistoryPoints(seed, points)
+    setHistory(nextHistory)
+    if (auth.status === 'in') saveHistoryEntry(seed, nextHistory[seed]).catch(() => {})
     setPuzzleState((prev) => ({
       ...prev,
       completedUnits: { rows: nextRows, cols: nextCols, boxes: nextBoxes },
@@ -268,11 +314,13 @@ function App() {
     if (!isSolved || puzzleState.scored) return
 
     const points = DIFFICULTY_CONFIG[difficulty].completionPoints
-    setHistory(addHistoryPoints(seed, points))
-    setHistory(recordHistoryTime(seed, difficulty, puzzleState.elapsedSeconds))
+    addHistoryPoints(seed, points)
+    const nextHistory = recordHistoryTime(seed, difficulty, puzzleState.elapsedSeconds)
+    setHistory(nextHistory)
+    if (auth.status === 'in') saveHistoryEntry(seed, nextHistory[seed]).catch(() => {})
     setPuzzleState((prev) => ({ ...prev, scored: true }))
     setJustScored(true)
-  }, [isSolved, puzzleState.scored, puzzleState.elapsedSeconds, difficulty, seed])
+  }, [isSolved, puzzleState.scored, puzzleState.elapsedSeconds, difficulty, seed, auth.status])
 
   const toggleNote = (row, col, digit) => {
     if (failed || isGiven(row, col) || puzzleState.board[row][col] !== '') return

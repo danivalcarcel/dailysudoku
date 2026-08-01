@@ -110,6 +110,93 @@ app.put('/api/nickname', requireAuth, async (c) => {
   return c.json({ nickname })
 })
 
+function parseProgressRow(row) {
+  return {
+    board: JSON.parse(row.board),
+    notes: JSON.parse(row.notes),
+    completedUnits: JSON.parse(row.completed_units),
+    scored: !!row.scored,
+    elapsedSeconds: row.elapsed_seconds,
+    mistakes: row.mistakes,
+  }
+}
+
+app.get('/api/progress/:date/:difficulty', requireAuth, async (c) => {
+  const { date, difficulty } = c.req.param()
+  const row = await c.env.DB.prepare(
+    'SELECT board, notes, completed_units, scored, elapsed_seconds, mistakes FROM progress WHERE user_id = ? AND date = ? AND difficulty = ?',
+  )
+    .bind(c.get('userId'), date, difficulty)
+    .first()
+
+  return c.json({ progress: row ? parseProgressRow(row) : null })
+})
+
+app.put('/api/progress/:date/:difficulty', requireAuth, async (c) => {
+  const { date, difficulty } = c.req.param()
+  const body = await readJsonBody(c)
+  if (!body) return c.json({ error: 'invalid body' }, 400)
+
+  await c.env.DB.prepare(
+    `INSERT INTO progress (user_id, date, difficulty, board, notes, completed_units, scored, elapsed_seconds, mistakes, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, date, difficulty) DO UPDATE SET
+       board = excluded.board,
+       notes = excluded.notes,
+       completed_units = excluded.completed_units,
+       scored = excluded.scored,
+       elapsed_seconds = excluded.elapsed_seconds,
+       mistakes = excluded.mistakes,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(
+      c.get('userId'),
+      date,
+      difficulty,
+      JSON.stringify(body.board),
+      JSON.stringify(body.notes),
+      JSON.stringify(body.completedUnits),
+      body.scored ? 1 : 0,
+      body.elapsedSeconds ?? 0,
+      body.mistakes ?? 0,
+      Date.now(),
+    )
+    .run()
+
+  return c.json({ ok: true })
+})
+
+app.get('/api/history', requireAuth, async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT date, points, times FROM history WHERE user_id = ?')
+    .bind(c.get('userId'))
+    .all()
+
+  const history = {}
+  for (const row of results) {
+    history[row.date] = { points: row.points, times: JSON.parse(row.times) }
+  }
+  return c.json({ history })
+})
+
+app.put('/api/history/:date', requireAuth, async (c) => {
+  const { date } = c.req.param()
+  const body = await readJsonBody(c)
+  if (!body) return c.json({ error: 'invalid body' }, 400)
+
+  await c.env.DB.prepare(
+    `INSERT INTO history (user_id, date, points, times, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, date) DO UPDATE SET
+       points = excluded.points,
+       times = excluded.times,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(c.get('userId'), date, body.points ?? 0, JSON.stringify(body.times ?? {}), Date.now())
+    .run()
+
+  return c.json({ ok: true })
+})
+
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw))
 
 export default app
