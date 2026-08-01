@@ -230,6 +230,21 @@ clawed back (same anti-farming philosophy as elsewhere: earning is
 one-directional). Only the completion bonus is out of reach until a fresh,
 successful attempt.
 
+## Topbar score: daily, not lifetime-cumulative
+
+Originally `score.js` persisted a single lifetime-total counter shown in the
+topbar, incremented forever and never reset. The user expected the topbar
+number to go back to 0 once the daily puzzle changed, and confirmed (when
+asked) that this should be a real behavior change, not just a misunderstanding
+of the existing cumulative design. `score.js` was deleted; the topbar now
+reads `history[seed]?.points ?? 0` directly from `scoreHistory.js`, which
+already tracked points per date — so it naturally shows 0 for a fresh day
+without any explicit reset logic. There is no lifetime total displayed
+anywhere anymore; if one is wanted later (e.g. a "puntos totales" stat), it
+would need to be derived by summing all `history` entries, not reintroduced
+as a separately-persisted counter (that would risk drifting from the
+per-day figures again).
+
 ## CSS specificity bug worth remembering
 
 Early on, `.actions button` (element+class selector) accidentally

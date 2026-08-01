@@ -14,7 +14,6 @@ src/
   sudokuCompletion.js      row/column/box completion checks used by the scoring system
 
   boardStorage.js          persistence of {board, notes, completedUnits, scored, elapsedSeconds, mistakes} per day+difficulty
-  score.js                 persistence of the lifetime total score
   scoreHistory.js          persistence of per-day {points, times: {difficulty: seconds}} (never pruned)
 
   i18n.js                  translations dict (es/en) + locale detection/persistence
@@ -76,8 +75,10 @@ next refactor, but don't do it preemptively.
      `scored` is still `false`, awards `completionPoints` once and records
      `elapsedSeconds` into today's history entry for this difficulty
      (`recordHistoryTime`).
-   The two scoring effects both add to the lifetime total (`score.js`) and
-   to today's entry in the history map (`scoreHistory.js`).
+   Both scoring effects add to today's entry in the history map
+   (`scoreHistory.js`); the topbar score display reads `history[seed].points`
+   directly, so it shows only today's points and resets on its own once the
+   day (and `seed`) changes — there's no separate lifetime counter.
 
 ## Rendering the board
 
