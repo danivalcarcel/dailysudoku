@@ -3,7 +3,6 @@ import { generateDailySudoku, getDailySeed, getNextResetTime } from './sudokuGen
 import { loadPuzzleState, savePuzzleState } from './boardStorage'
 import { LOCALES, translations, detectLocale, persistLocale } from './i18n'
 import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } from './difficulties'
-import { loadScore, saveScore } from './score'
 import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
 import './App.css'
@@ -66,7 +65,6 @@ function App() {
   const [selected, setSelected] = useState({ row: 0, col: 0 })
   const [notesMode, setNotesMode] = useState(false)
   const [locale, setLocale] = useState(detectLocale)
-  const [totalScore, setTotalScore] = useState(loadScore)
   const [history, setHistory] = useState(loadHistory)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [justScored, setJustScored] = useState(false)
@@ -132,6 +130,8 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
+  const todayScore = history[seed]?.points ?? 0
+
   const isGiven = (row, col) => puzzle[row][col] !== 0
 
   const isSolved = board.every((row, r) => row.every((cell, c) => Number(cell) === solution[r][c]))
@@ -183,11 +183,6 @@ function App() {
     if (newlyCompleted === 0) return
 
     const points = newlyCompleted * DIFFICULTY_CONFIG[difficulty].unitPoints
-    setTotalScore((prev) => {
-      const next = prev + points
-      saveScore(next)
-      return next
-    })
     setHistory(addHistoryPoints(seed, points))
     setPuzzleState((prev) => ({
       ...prev,
@@ -202,11 +197,6 @@ function App() {
     if (!isSolved || puzzleState.scored) return
 
     const points = DIFFICULTY_CONFIG[difficulty].completionPoints
-    setTotalScore((prev) => {
-      const next = prev + points
-      saveScore(next)
-      return next
-    })
     setHistory(addHistoryPoints(seed, points))
     setHistory(recordHistoryTime(seed, difficulty, puzzleState.elapsedSeconds))
     setPuzzleState((prev) => ({ ...prev, scored: true }))
@@ -356,7 +346,7 @@ function App() {
 
       <div className="stats-row">
         <p className="score">
-          {t.scoreLabel}: <strong>{totalScore}</strong>
+          {t.scoreLabel}: <strong>{todayScore}</strong>
         </p>
 
         <p className="timer">
