@@ -111,6 +111,61 @@ A tag with a `-suffix` (like `-beta.1`, `-rc.1`) is published as a
 normal release. The workflow builds the app, zips `dist/`, and attaches it
 to the GitHub release with auto-generated notes.
 
+## Backend: D1 database (cloud sync)
+
+The Worker API (`worker/index.js`) uses a Cloudflare D1 database, bound as
+`DB` in `wrangler.jsonc`. This is separate from `wrangler login` (below) —
+D1 access also needs `wrangler login` to have run first, then:
+
+```bash
+npx wrangler d1 create dailysudoku-db
+```
+
+prints a `database_id` to paste into the `"d1_databases"` block of
+`wrangler.jsonc` (already done for this project — `dailysudoku-db`,
+region WEUR). To apply `worker/schema.sql` (needed once, and again after
+any schema change) to **both** the local dev emulation and the real
+production database:
+
+```bash
+npx wrangler d1 execute dailysudoku-db --local --file=worker/schema.sql
+```
+
+```bash
+npx wrangler d1 execute dailysudoku-db --remote --file=worker/schema.sql
+```
+
+`npm run dev` (the Vite dev server) proxies `/api/*` requests to the actual
+Worker code and the local D1 emulation — no separate `wrangler dev` needed
+for day-to-day API development.
+
+## Backend: Google sign-in
+
+Two values the Worker needs, of different sensitivity:
+
+- **`GOOGLE_CLIENT_ID`** — not a secret (OAuth client IDs are meant to be
+  public), so it's committed directly in `wrangler.jsonc`'s `"vars"` and
+  duplicated as a literal in `src/auth.js` for the frontend. Created once
+  in Google Cloud Console → APIs & Services → Credentials → OAuth client ID
+  → **Web application**, with Authorized JavaScript origins for both
+  `http://localhost:5173` and the production URL. Only the user can create
+  this (needs their own Google account) — if it ever needs to change,
+  ask them for a new one rather than trying to script around it.
+- **`SESSION_SECRET`** — a real secret (signs our own session cookie, see
+  `.claude/ARCHITECTURE.md`). Local dev reads it from `.dev.vars`
+  (gitignored; `.dev.vars.example` shows the expected key). Production is
+  set with:
+
+  ```bash
+  npx wrangler secret put SESSION_SECRET
+  ```
+
+  (pipe a random value into it rather than typing one, e.g.
+  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+  Rotating it invalidates every existing session (everyone gets logged
+  out) — that's an accepted tradeoff, not a bug, given there's no sessions
+  table to selectively revoke.
+
 ## Live deployment (Cloudflare Workers)
 
 Live URL: **https://dailysudoku.danivalcarcel.workers.dev/**

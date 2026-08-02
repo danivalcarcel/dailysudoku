@@ -3,15 +3,17 @@
 Things a future session would otherwise have to rediscover by reading diffs.
 Ordered roughly by when they came up.
 
-## No backend, ever (so far)
+## No backend, ever (so far) — superseded, see "Backend: Google login..." below
 
-Every feature — the daily puzzle, notes, score, history, language, difficulty
-preference — is generated or persisted entirely client-side. This was set
-early ("web estática") and every later feature was deliberately designed to
-fit that constraint rather than reaching for a server. If a future request
-needs shared/cross-device state (a real leaderboard, syncing progress across
-devices), that's a genuine architecture change, not a small addition —
-flag it explicitly rather than quietly bolting a backend on.
+Originally, every feature — the daily puzzle, notes, score, history,
+language, difficulty preference — was generated or persisted entirely
+client-side ("web estática"), and every feature up to that point was
+deliberately designed to fit that constraint. This was explicitly reversed
+once the user asked for cross-device sync and a real leaderboard — see the
+dedicated decision entry further down for what changed and why. The
+*daily puzzle itself* still stays 100% client-side (seeded generation,
+below) — the backend is for progress/score/account state only, not for
+the puzzle logic.
 
 ## Daily puzzle: seeded generation, not a fixed list or per-request random
 
@@ -253,3 +255,57 @@ because element+class beats a single class regardless of source order.
 Fixed by scoping to `.actions .notes-toggle` (two classes). If a new
 button added inside `.actions` looks like it's ignoring its own modifier
 class, check this first.
+
+## Backend: Google login, cloud sync, and a daily leaderboard
+
+This reverses "No backend, ever (so far)" above — the first genuine
+architecture change in the project, built in five phases on the
+`idea/cloud-sync-google-auth` branch (see git log for the phase-by-phase
+commits; this branch started from a since-deleted `BACKEND_IDEA.md` sketch
+that raised the open questions resolved below). Several judgment calls
+were made explicitly with the user before writing any code, rather than
+assumed:
+
+- **First login is destructive to local data, on purpose.** No migration
+  step exists for whatever was in `localStorage` before someone logs in
+  for the first time — the backend simply becomes authoritative from that
+  moment on, discarding local progress/history rather than trying to
+  upload/merge it. This was the *simplest* of three options offered and
+  was chosen explicitly over "upload once" or "ask the user to choose".
+- **Multi-device conflicts: last write wins, no merge logic.** Every
+  `PUT /api/progress/...` and `PUT /api/history/...` is a plain
+  `INSERT ... ON CONFLICT DO UPDATE` (upsert) — there's no version check,
+  no timestamp comparison, no per-field merge. Whichever device's request
+  reaches the Worker last simply overwrites what was there. Accepted
+  explicitly as good enough for a casual daily game; don't add merge logic
+  later without a real reported problem, since it's meaningfully more
+  complex for an edge case (same account, two devices, same moment).
+- **Leaderboard shows user-chosen nicknames, never the real Google
+  name/photo.** A deliberate privacy choice — logging in with Google
+  should not mean your real name becomes visible to other players. First
+  login prompts for a nickname (enforced unique, case-insensitively)
+  before any sync happens.
+- **Leaderboard is daily, not all-time.** Resets at the same
+  `RESET_HOUR_UTC` moment as the puzzle itself, by construction (it's
+  keyed on the same `seed`) — deliberately not a lifetime ranking, to keep
+  it about "who did best on today's puzzle", consistent with the
+  score-reset decision above.
+- **Sessions are long-lived (60 days), stateless, no sessions table.**
+  A signed JWT cookie (`SESSION_SECRET`, HS256) rather than a
+  server-tracked session — simpler, at the cost that the *only* way to
+  revoke a session early is rotating the secret (logs out everyone, not
+  just one account). Accepted as fine for a casual game with no
+  security-sensitive data beyond an email address.
+- **Account deletion is real, immediate, and irreversible** — no
+  soft-delete, no grace period. This exists specifically because a real
+  personal identifier (Google email) is now stored in D1, flagged up front
+  as something that would need addressing once this backend held real
+  personal data. The confirmation UX (an in-app two-step Cancel/"Sí,
+  borrar" panel, not a native `confirm()` dialog) was also an explicit
+  choice, not a default — asked and answered before implementing.
+
+If a future session is asked to touch any of these behaviors (e.g. "add
+migration for existing local progress", "let me revoke just one device's
+session", "add a real all-time leaderboard"), treat it as *reversing* one
+of the above, not fixing a bug — confirm with the user first the same way
+these were decided.

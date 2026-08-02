@@ -10,6 +10,8 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "hono": "^4.12.33",
+    "jose": "^6.2.7",
     "react": "^19.2.1",
     "react-dom": "^19.2.1"
   },

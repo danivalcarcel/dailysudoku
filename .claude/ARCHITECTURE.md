@@ -18,6 +18,10 @@ src/
 
   i18n.js                  translations dict (es/en) + locale detection/persistence
 
+worker/
+  index.js                 Worker entry point (Hono): /api/* routes, everything else falls through to env.ASSETS
+  schema.sql                D1 table definitions (users, progress, history)
+
 .github/workflows/release.yml   tag-triggered build + GitHub release
 .claude/launch.json              dev server config for the Claude Code browser preview
 ```
@@ -123,6 +127,157 @@ into a `countdown` state (milliseconds remaining), formatted as `"9h
 one every second like the per-puzzle timer. The displayed puzzle date
 (`formatDate(seed, locale)`) reuses `seed` (`getDailySeed()`'s result), not
 `new Date()`, for the reason in `.claude/DECISIONS.md`.
+
+## Backend: Worker API + D1 (cloud sync, in progress)
+
+`wrangler.jsonc`'s `"main": "./worker/index.js"` mounts a Hono app
+alongside the existing static-asset serving: requests are dispatched to
+the Worker first, and its `notFound` handler falls through to
+`env.ASSETS.fetch(request)` (the `"assets": {"binding": "ASSETS"}` config)
+for anything it doesn't explicitly route — so the SPA keeps being served
+exactly as before for every non-`/api/*` path. This is confirmed to work in
+the `npm run dev` server itself (not just `wrangler dev`/preview) for
+`fetch()`-style requests; a *full browser navigation* straight to an
+`/api/*` path is a dev-server-only edge case that doesn't matter in
+practice (the app only ever reaches `/api/*` via `fetch`, never by
+navigating the browser there).
+
+D1 (`"d1_databases"` binding `DB`, database `dailysudoku-db`) holds three
+tables mirroring the existing `localStorage` shapes 1:1 (`worker/schema.sql`):
+`users` (by Google `sub`, nullable `nickname` until chosen), `progress`
+(same fields as `boardStorage.js`, keyed by `user_id`+date+difficulty), and
+`history` (same fields as `scoreHistory.js`, keyed by `user_id`+date).
+Scoring/validation logic itself is not moving server-side — the backend is
+a sync transport, not a rewrite. See `.claude/DECISIONS.md`'s "Backend:
+Google login, cloud sync, and a daily leaderboard" entry for why this
+backend exists at all and the open questions that were resolved to get
+here (migration policy, conflict policy, leaderboard scope). Schema
+changes are applied by hand
+with `wrangler d1 execute dailysudoku-db --file=worker/schema.sql` (add
+`--remote` for production; local dev uses a separate local D1 emulation
+under `.wrangler/state/`, so a schema change needs applying to *both*).
+
+### Auth (Google Identity Services + a self-signed session cookie)
+
+`worker/auth.js` has two independent jobs, both via `jose` (edge-compatible
+JWT library):
+
+- **Verifying Google's ID token** (`verifyGoogleCredential`): checks it
+  against Google's own JWKS (`createRemoteJWKSet`, auto-fetched/cached by
+  `jose`), validating `iss`/`aud`/`exp`. `aud` must match
+  `GOOGLE_CLIENT_ID` — a non-secret value committed directly in
+  `wrangler.jsonc`'s `vars` (OAuth client IDs are meant to be public,
+  embedded in every page load) and duplicated as a literal in
+  `src/auth.js` for the frontend's `google.accounts.id.initialize` call.
+- **Our own session** (`createSessionToken`/`verifySessionToken`): a
+  stateless HS256 JWT (`{ uid }`, 60-day expiry) signed with
+  `SESSION_SECRET` — a real secret, set via `wrangler secret put` for
+  production and `.dev.vars` (gitignored; `.dev.vars.example` documents the
+  key) for local dev. No sessions table: revocation would mean rotating
+  the secret (logging out everyone), an accepted tradeoff for a casual
+  game — see `.claude/DECISIONS.md`.
+
+`POST /api/auth/google` upserts the `users` row by `google_sub` (email
+refreshed on every login, nickname left untouched) and sets the session as
+an HttpOnly/Secure/SameSite=Lax cookie (`hono/cookie`'s
+`getCookie`/`setCookie`/`deleteCookie`). `requireAuth` (a Hono middleware
+in `worker/index.js`) reads and verifies that cookie for any route that
+needs a logged-in user, attaching the user id via `c.set('userId', ...)`.
+
+Frontend side: `src/auth.js` exports `renderGoogleButton` (calls
+`google.accounts.id.initialize`/`renderButton` once the GIS script — loaded
+via a `<script>` tag in `index.html`, not an npm package — has finished
+loading) plus thin `fetch`-wrapper functions for each endpoint. `App.jsx`
+tracks session state as `auth: { status: 'loading'|'out'|'needsNickname'|'in',
+nickname? }`, fetching `/api/me` on mount and polling for `window.google`
+readiness (the script is `async defer`, so it may not exist yet on first
+render) before rendering the sign-in button.
+
+`src/apiClient.js` holds the one `fetch` wrapper (`apiRequest`: always
+`credentials: 'include'`, never throws on non-2xx) that both `auth.js` and
+`sync.js` build on, so there's a single place that knows how to talk to the
+Worker.
+
+### Progress/history sync (`worker/index.js`'s `/api/progress`,
+`/api/history` routes + `src/sync.js`)
+
+Both behind `requireAuth`. `GET/PUT /api/progress/:date/:difficulty` and
+`GET /api/history` / `PUT /api/history/:date` are near-literal transports
+over the `progress`/`history` D1 tables — JSON columns
+(`board`/`notes`/`completed_units`/`times`) round-trip via
+`JSON.stringify`/`JSON.parse`, everything else is a plain column. Both PUT
+routes use SQLite's `INSERT ... ON CONFLICT DO UPDATE` (upsert) against the
+tables' composite primary keys — there is no read-modify-write, no version
+check, no merge: whichever `PUT` reaches the server last simply overwrites.
+This is what makes "last device to write wins" true without any explicit
+conflict-resolution code (see `.claude/DECISIONS.md`).
+
+`App.jsx` wires this in three places:
+
+1. A `useEffect` keyed on `[auth.status, seed, difficulty]` that, only when
+   `auth.status === 'in'`, fetches remote progress+history and
+   **unconditionally overwrites** local React state with whatever the
+   server returns (an empty/default state if the server has nothing yet)
+   — the "backend is authoritative" decision applied consistently, not
+   just at first login.
+2. The existing `savePuzzleState` effect additionally calls
+   `saveProgress(...)` (fire-and-forget, `.catch(() => {})`) whenever
+   logged in — so every local save also becomes a remote save.
+3. Both scoring effects (`addHistoryPoints`/`recordHistoryTime`) additionally
+   call `saveHistoryEntry(seed, ...)` with just that date's updated entry,
+   same fire-and-forget pattern.
+
+`localStorage` (`boardStorage.js`/`scoreHistory.js`) keeps being written to
+unconditionally regardless of login state — it's a passive local cache of
+"whatever the last known state was" (be that locally-played or
+just-synced-down-from-remote data), not something that gets bypassed when
+logged in. This keeps the logged-out code path byte-for-byte unchanged.
+
+### Daily leaderboard (`GET /api/leaderboard/:date`, `src/sync.js`'s
+`fetchLeaderboard`)
+
+Deliberately **not** behind `requireAuth` — it only ever returns
+self-chosen nicknames and points (never email or any other real-identity
+field), so there's no privacy reason to require a session just to read it.
+The query is a straight `history JOIN users ON user_id`, filtered to
+`nickname IS NOT NULL` (an account that hasn't picked one yet is invisible
+on the board, not shown with a placeholder), ordered by points descending,
+capped at `LEADERBOARD_LIMIT` (10). "Today" here means whatever `:date`
+the frontend passes — always `seed` (`getDailySeed()`'s result), so the
+board changes over to a new empty ranking at the same `RESET_HOUR_UTC`
+moment the puzzle itself does, no separate reset logic needed.
+
+`App.jsx` refreshes it in the same 30s `setInterval` that already drove the
+puzzle-reset countdown (one timer, two things it refreshes, rather than a
+second interval) plus once immediately after the two scoring effects
+successfully push a `saveHistoryEntry` — so your own new score appears on
+the board right away instead of waiting up to 30s. The current player's own
+row is highlighted (`leaderboard__row--you`, a "(tú)"/"(you)" tag) by
+matching `entry.nickname === auth.nickname` — nickname equality is enough
+since nicknames are enforced unique server-side (`PUT /api/nickname`'s
+case-insensitive clash check).
+
+### Account deletion (`DELETE /api/account`)
+
+Behind `requireAuth`. Deletes the `progress` and `history` rows for that
+`user_id` *before* the `users` row itself (D1 enforces the foreign keys —
+deleting `users` first throws a `SQLITE_CONSTRAINT_FOREIGNKEY` error), all
+three in one `c.env.DB.batch([...])` call, then clears the session cookie.
+No soft-delete, no "restore within 30 days" grace period — genuinely
+irreversible, on purpose (see `.claude/DECISIONS.md`; this exists because
+real personal data — the Google email — is now stored, a "right to be
+forgotten" concern flagged from the start of this backend work).
+
+`App.jsx`'s delete flow is a two-step in-app confirmation, not a native
+`confirm()` dialog: `deleteConfirming` state swaps the small
+"Eliminar cuenta"/"Delete account" text link for an inline warning box with
+Cancel/Yes-delete buttons. On confirm, `handleDeleteAccount` calls
+`deleteAccount()` (`src/auth.js`) and, on success, resets `auth` straight to
+`{ status: 'out' }` — same end state as a normal logout, since the account
+genuinely no longer exists server-side. `localStorage` is deliberately left
+untouched by this (same reasoning as logout): whatever was last cached
+locally stays there as a plain local-only game, exactly like using the app
+without ever logging in.
 
 ## Page shell (`body` / `#root`)
 

@@ -1,14 +1,26 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dailysudoku",
+  "main": "./worker/index.js",
   "compatibility_date": "2026-07-26",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS"
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "vars": {
+    "GOOGLE_CLIENT_ID": "748622526703-7ko765jijc1sn6kmt1vbcqmj4be9389g.apps.googleusercontent.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dailysudoku-db",
+      "database_id": "59cb6be6-b046-4aaa-80c6-0506527a5430"
+    }
   ]
 }
