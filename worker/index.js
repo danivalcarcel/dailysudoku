@@ -82,6 +82,20 @@ app.post('/api/auth/logout', (c) => {
   return c.json({ ok: true })
 })
 
+// Derecho al olvido: borra todo lo que guarda esta cuenta (progreso,
+// historial, email/apodo) y cierra la sesion. Irreversible a proposito, sin
+// papelera ni soft-delete - ver .claude/DECISIONS.md.
+app.delete('/api/account', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM progress WHERE user_id = ?').bind(userId),
+    c.env.DB.prepare('DELETE FROM history WHERE user_id = ?').bind(userId),
+    c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+  ])
+  deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  return c.json({ ok: true })
+})
+
 app.get('/api/me', requireAuth, async (c) => {
   const user = await c.env.DB.prepare('SELECT email, nickname FROM users WHERE id = ?')
     .bind(c.get('userId'))

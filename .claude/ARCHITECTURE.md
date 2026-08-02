@@ -148,10 +148,11 @@ tables mirroring the existing `localStorage` shapes 1:1 (`worker/schema.sql`):
 (same fields as `boardStorage.js`, keyed by `user_id`+date+difficulty), and
 `history` (same fields as `scoreHistory.js`, keyed by `user_id`+date).
 Scoring/validation logic itself is not moving server-side — the backend is
-a sync transport, not a rewrite. See `.claude/DECISIONS.md` for why this
-backend exists at all and `.claude/BACKEND_IDEA.md`'s original sketch for
-the open questions that were resolved to get here (migration policy,
-conflict policy, leaderboard scope). Schema changes are applied by hand
+a sync transport, not a rewrite. See `.claude/DECISIONS.md`'s "Backend:
+Google login, cloud sync, and a daily leaderboard" entry for why this
+backend exists at all and the open questions that were resolved to get
+here (migration policy, conflict policy, leaderboard scope). Schema
+changes are applied by hand
 with `wrangler d1 execute dailysudoku-db --file=worker/schema.sql` (add
 `--remote` for production; local dev uses a separate local D1 emulation
 under `.wrangler/state/`, so a schema change needs applying to *both*).
@@ -255,6 +256,28 @@ row is highlighted (`leaderboard__row--you`, a "(tú)"/"(you)" tag) by
 matching `entry.nickname === auth.nickname` — nickname equality is enough
 since nicknames are enforced unique server-side (`PUT /api/nickname`'s
 case-insensitive clash check).
+
+### Account deletion (`DELETE /api/account`)
+
+Behind `requireAuth`. Deletes the `progress` and `history` rows for that
+`user_id` *before* the `users` row itself (D1 enforces the foreign keys —
+deleting `users` first throws a `SQLITE_CONSTRAINT_FOREIGNKEY` error), all
+three in one `c.env.DB.batch([...])` call, then clears the session cookie.
+No soft-delete, no "restore within 30 days" grace period — genuinely
+irreversible, on purpose (see `.claude/DECISIONS.md`; this exists because
+real personal data — the Google email — is now stored, a "right to be
+forgotten" concern flagged from the start of this backend work).
+
+`App.jsx`'s delete flow is a two-step in-app confirmation, not a native
+`confirm()` dialog: `deleteConfirming` state swaps the small
+"Eliminar cuenta"/"Delete account" text link for an inline warning box with
+Cancel/Yes-delete buttons. On confirm, `handleDeleteAccount` calls
+`deleteAccount()` (`src/auth.js`) and, on success, resets `auth` straight to
+`{ status: 'out' }` — same end state as a normal logout, since the account
+genuinely no longer exists server-side. `localStorage` is deliberately left
+untouched by this (same reasoning as logout): whatever was last cached
+locally stays there as a plain local-only game, exactly like using the app
+without ever logging in.
 
 ## Page shell (`body` / `#root`)
 

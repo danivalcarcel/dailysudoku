@@ -29,6 +29,12 @@ export const translations = {
     leaderboardLabel: 'Ranking de hoy',
     leaderboardEmpty: 'Aún nadie ha puntuado hoy.',
     leaderboardYou: 'tú',
+    deleteAccount: 'Eliminar cuenta',
+    deleteAccountConfirm:
+      '¿Seguro? Se borrará tu progreso, historial y apodo en la nube. Esta acción no se puede deshacer.',
+    deleteAccountYes: 'Sí, borrar',
+    deleteAccountCancel: 'Cancelar',
+    deleteAccountError: 'No se pudo eliminar la cuenta, inténtalo de nuevo',
     difficulties: {
       easy: 'Fácil',
       medium: 'Medio',
@@ -64,6 +70,12 @@ export const translations = {
     leaderboardLabel: "Today's ranking",
     leaderboardEmpty: 'No one has scored today yet.',
     leaderboardYou: 'you',
+    deleteAccount: 'Delete account',
+    deleteAccountConfirm:
+      "Are you sure? This deletes your cloud progress, history and nickname. This can't be undone.",
+    deleteAccountYes: 'Yes, delete',
+    deleteAccountCancel: 'Cancel',
+    deleteAccountError: "Couldn't delete the account, please try again",
     difficulties: {
       easy: 'Easy',
       medium: 'Medium',

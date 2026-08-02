@@ -5,7 +5,7 @@ import { LOCALES, translations, detectLocale, persistLocale } from './i18n'
 import { DIFFICULTIES, DIFFICULTY_CONFIG, detectDifficulty, persistDifficulty } from './difficulties'
 import { loadHistory, addHistoryPoints, recordHistoryTime } from './scoreHistory'
 import { createEmptyCompletedUnits, isRowComplete, isColComplete, isBoxComplete } from './sudokuCompletion'
-import { fetchMe, loginWithGoogle, logout, renderGoogleButton, setNickname } from './auth'
+import { fetchMe, loginWithGoogle, logout, renderGoogleButton, setNickname, deleteAccount } from './auth'
 import { fetchProgress, saveProgress, fetchHistory, saveHistoryEntry, fetchLeaderboard } from './sync'
 import './App.css'
 
@@ -77,6 +77,7 @@ function App() {
   const [nicknameError, setNicknameError] = useState('')
   const [leaderboard, setLeaderboard] = useState([])
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [deleteConfirming, setDeleteConfirming] = useState(false)
   const cellRefs = useRef(Array.from({ length: 9 }, () => Array(9).fill(null)))
   const toastTimeoutRef = useRef(null)
   const googleButtonRef = useRef(null)
@@ -150,6 +151,18 @@ function App() {
 
   const handleLogout = async () => {
     await logout()
+    setNicknameInput('')
+    setNicknameError('')
+    setAuth({ status: 'out' })
+  }
+
+  const handleDeleteAccount = async () => {
+    const { ok } = await deleteAccount()
+    if (!ok) {
+      showToast(t.deleteAccountError)
+      return
+    }
+    setDeleteConfirming(false)
     setNicknameInput('')
     setNicknameError('')
     setAuth({ status: 'out' })
@@ -505,12 +518,38 @@ function App() {
         )}
 
         {auth.status === 'in' && (
-          <p className="auth__status">
-            {t.loggedInAs} <strong>{auth.nickname}</strong>
-            <button type="button" className="auth__signout" onClick={handleLogout}>
-              {t.signOut}
-            </button>
-          </p>
+          <div className="auth__status">
+            <p className="auth__status-row">
+              {t.loggedInAs} <strong>{auth.nickname}</strong>
+              <button type="button" className="auth__signout" onClick={handleLogout}>
+                {t.signOut}
+              </button>
+            </p>
+
+            {!deleteConfirming && (
+              <button
+                type="button"
+                className="auth__delete-link"
+                onClick={() => setDeleteConfirming(true)}
+              >
+                {t.deleteAccount}
+              </button>
+            )}
+
+            {deleteConfirming && (
+              <div className="auth__delete-confirm">
+                <p>{t.deleteAccountConfirm}</p>
+                <div className="auth__delete-confirm-actions">
+                  <button type="button" onClick={() => setDeleteConfirming(false)}>
+                    {t.deleteAccountCancel}
+                  </button>
+                  <button type="button" className="auth__delete-yes" onClick={handleDeleteAccount}>
+                    {t.deleteAccountYes}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

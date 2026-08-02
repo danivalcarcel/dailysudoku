@@ -30,3 +30,7 @@ export function logout() {
 export function setNickname(nickname) {
   return apiRequest('/api/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) })
 }
+
+export function deleteAccount() {
+  return apiRequest('/api/account', { method: 'DELETE' })
+}
