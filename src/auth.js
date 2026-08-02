@@ -12,7 +12,7 @@ export function renderGoogleButton(el, onCredential) {
     client_id: GOOGLE_CLIENT_ID,
     callback: (response) => onCredential(response.credential),
   })
-  window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'medium' })
+  window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'small' })
 }
 
 export function fetchMe() {

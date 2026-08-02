@@ -483,24 +483,61 @@ function App() {
           </p>
         </div>
 
-        <div className="lang-switch">
-          {LOCALES.map((code) => (
-            <button
-              key={code}
-              type="button"
-              className={`lang-switch__btn${locale === code ? ' lang-switch__btn--active' : ''}`}
-              onClick={() => setLocale(code)}
-            >
-              {code.toUpperCase()}
-            </button>
-          ))}
+        <div className="topbar__actions">
+          <div className="lang-switch">
+            {LOCALES.map((code) => (
+              <button
+                key={code}
+                type="button"
+                className={`lang-switch__btn${locale === code ? ' lang-switch__btn--active' : ''}`}
+                onClick={() => setLocale(code)}
+              >
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {auth.status === 'out' && <div ref={googleButtonRef} className="auth__google-btn" />}
+
+          {auth.status === 'in' && (
+            <div className="auth__status">
+              <p className="auth__status-row">
+                {t.loggedInAs} <strong>{auth.nickname}</strong>
+                <button type="button" className="auth__signout" onClick={handleLogout}>
+                  {t.signOut}
+                </button>
+              </p>
+
+              {!deleteConfirming && (
+                <button
+                  type="button"
+                  className="auth__delete-link"
+                  onClick={() => setDeleteConfirming(true)}
+                >
+                  {t.deleteAccount}
+                </button>
+              )}
+
+              {deleteConfirming && (
+                <div className="auth__delete-confirm">
+                  <p>{t.deleteAccountConfirm}</p>
+                  <div className="auth__delete-confirm-actions">
+                    <button type="button" onClick={() => setDeleteConfirming(false)}>
+                      {t.deleteAccountCancel}
+                    </button>
+                    <button type="button" className="auth__delete-yes" onClick={handleDeleteAccount}>
+                      {t.deleteAccountYes}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="auth">
-        {auth.status === 'out' && <div ref={googleButtonRef} className="auth__google-btn" />}
-
-        {auth.status === 'needsNickname' && (
+      {auth.status === 'needsNickname' && (
+        <div className="auth">
           <form className="auth__nickname" onSubmit={handleNicknameSubmit}>
             <p>{t.nicknamePrompt}</p>
             <div className="auth__nickname-row">
@@ -515,43 +552,8 @@ function App() {
             </div>
             {nicknameError && <p className="auth__error">{nicknameError}</p>}
           </form>
-        )}
-
-        {auth.status === 'in' && (
-          <div className="auth__status">
-            <p className="auth__status-row">
-              {t.loggedInAs} <strong>{auth.nickname}</strong>
-              <button type="button" className="auth__signout" onClick={handleLogout}>
-                {t.signOut}
-              </button>
-            </p>
-
-            {!deleteConfirming && (
-              <button
-                type="button"
-                className="auth__delete-link"
-                onClick={() => setDeleteConfirming(true)}
-              >
-                {t.deleteAccount}
-              </button>
-            )}
-
-            {deleteConfirming && (
-              <div className="auth__delete-confirm">
-                <p>{t.deleteAccountConfirm}</p>
-                <div className="auth__delete-confirm-actions">
-                  <button type="button" onClick={() => setDeleteConfirming(false)}>
-                    {t.deleteAccountCancel}
-                  </button>
-                  <button type="button" className="auth__delete-yes" onClick={handleDeleteAccount}>
-                    {t.deleteAccountYes}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="stats-row">
         <p className="score">
