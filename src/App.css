@@ -308,12 +308,19 @@ h1 {
   color: var(--color-wrong-text);
 }
 
+.panels-row {
+  display: flex;
+  gap: 1rem;
+  width: min(34rem, 100%);
+}
+
 .history {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  width: min(34rem, 100%);
+  flex: 1;
+  min-width: 0;
 }
 
 .history__toggle {
@@ -393,7 +400,8 @@ h1 {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  width: min(34rem, 100%);
+  flex: 1;
+  min-width: 0;
 }
 
 .leaderboard__toggle {
@@ -767,10 +775,13 @@ h1 {
 
   .board,
   .numpad,
-  .history,
-  .leaderboard,
+  .panels-row,
   .topbar {
     width: min(28rem, 90%);
+  }
+
+  .panels-row {
+    gap: 0.5rem;
   }
 
   .topbar {

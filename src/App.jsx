@@ -690,83 +690,85 @@ function App() {
         <button onClick={handleReset}>{t.reset}</button>
       </div>
 
-      <div className="history">
-        <button
-          type="button"
-          className="history__toggle"
-          onClick={() => setHistoryOpen((prev) => !prev)}
-        >
-          {t.historyLabel} {historyOpen ? '▲' : '▼'}
-        </button>
+      <div className="panels-row">
+        <div className="history">
+          <button
+            type="button"
+            className="history__toggle"
+            onClick={() => setHistoryOpen((prev) => !prev)}
+          >
+            {t.historyLabel} {historyOpen ? '▲' : '▼'}
+          </button>
 
-        {historyOpen && (
-          <ul className="history__list">
-            {Object.keys(history).length === 0 && (
-              <li className="history__empty">{t.historyEmpty}</li>
-            )}
-            {Object.entries(history)
-              .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-              .map(([date, entry]) => (
-                <li key={date} className="history__row">
-                  <div className="history__row-main">
-                    <span>
-                      {formatDate(date, locale)}
-                      {date === seed && <span className="history__today"> ({t.historyToday})</span>}
-                    </span>
-                    <span>
-                      {entry.points} {t.pointsSuffix}
-                    </span>
-                  </div>
-                  {Object.keys(entry.times).length > 0 && (
-                    <div className="history__times">
-                      {DIFFICULTIES.filter((id) => entry.times[id] != null).map((id) => (
-                        <span key={id} className="history__time">
-                          {t.difficulties[id]}: {formatTime(entry.times[id])}
-                        </span>
-                      ))}
+          {historyOpen && (
+            <ul className="history__list">
+              {Object.keys(history).length === 0 && (
+                <li className="history__empty">{t.historyEmpty}</li>
+              )}
+              {Object.entries(history)
+                .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+                .map(([date, entry]) => (
+                  <li key={date} className="history__row">
+                    <div className="history__row-main">
+                      <span>
+                        {formatDate(date, locale)}
+                        {date === seed && <span className="history__today"> ({t.historyToday})</span>}
+                      </span>
+                      <span>
+                        {entry.points} {t.pointsSuffix}
+                      </span>
                     </div>
-                  )}
+                    {Object.keys(entry.times).length > 0 && (
+                      <div className="history__times">
+                        {DIFFICULTIES.filter((id) => entry.times[id] != null).map((id) => (
+                          <span key={id} className="history__time">
+                            {t.difficulties[id]}: {formatTime(entry.times[id])}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="leaderboard">
+          <button
+            type="button"
+            className="leaderboard__toggle"
+            onClick={() => setLeaderboardOpen((prev) => !prev)}
+          >
+            {t.leaderboardLabel} {leaderboardOpen ? '▲' : '▼'}
+          </button>
+
+          {leaderboardOpen && (
+            <ul className="leaderboard__list">
+              {leaderboard.length === 0 && <li className="leaderboard__empty">{t.leaderboardEmpty}</li>}
+              {leaderboard.map((entry, index) => (
+                <li
+                  key={entry.nickname}
+                  className={`leaderboard__row${
+                    auth.status === 'in' && entry.nickname === auth.nickname
+                      ? ' leaderboard__row--you'
+                      : ''
+                  }`}
+                >
+                  <span className="leaderboard__rank">{index + 1}</span>
+                  <span className="leaderboard__nickname">
+                    {entry.nickname}
+                    {auth.status === 'in' && entry.nickname === auth.nickname && (
+                      <span className="leaderboard__you-tag"> ({t.leaderboardYou})</span>
+                    )}
+                  </span>
+                  <span className="leaderboard__points">
+                    {entry.points} {t.pointsSuffix}
+                  </span>
                 </li>
               ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="leaderboard">
-        <button
-          type="button"
-          className="leaderboard__toggle"
-          onClick={() => setLeaderboardOpen((prev) => !prev)}
-        >
-          {t.leaderboardLabel} {leaderboardOpen ? '▲' : '▼'}
-        </button>
-
-        {leaderboardOpen && (
-          <ul className="leaderboard__list">
-            {leaderboard.length === 0 && <li className="leaderboard__empty">{t.leaderboardEmpty}</li>}
-            {leaderboard.map((entry, index) => (
-              <li
-                key={entry.nickname}
-                className={`leaderboard__row${
-                  auth.status === 'in' && entry.nickname === auth.nickname
-                    ? ' leaderboard__row--you'
-                    : ''
-                }`}
-              >
-                <span className="leaderboard__rank">{index + 1}</span>
-                <span className="leaderboard__nickname">
-                  {entry.nickname}
-                  {auth.status === 'in' && entry.nickname === auth.nickname && (
-                    <span className="leaderboard__you-tag"> ({t.leaderboardYou})</span>
-                  )}
-                </span>
-                <span className="leaderboard__points">
-                  {entry.points} {t.pointsSuffix}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )
